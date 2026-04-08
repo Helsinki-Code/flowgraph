@@ -42,14 +42,20 @@ body {
   --border: #2a2a3a;
   --border-subtle: #1f1f2e;
 
-  /* Accent colors */
-  --accent: #7c3aed;        /* Violet — primary CTA */
-  --accent-hover: #6d28d9;
-  --accent-light: rgba(124, 58, 237, 0.1);
-  --accent-glow: rgba(124, 58, 237, 0.15);
+  /* Accent colors — FLAME palette */
+  --accent: #f97316;        /* Orange — primary CTA, fire feel */
+  --accent-hover: #ea580c;
+  --accent-light: rgba(249, 115, 22, 0.1);
+  --accent-glow: rgba(249, 115, 22, 0.15);
 
-  --accent-2: #2563eb;      /* Blue — secondary */
-  --accent-2-hover: #1d4ed8;
+  --accent-2: #ef4444;      /* Red — hot, danger, loops */
+  --accent-2-hover: #dc2626;
+  --accent-2-light: rgba(239, 68, 68, 0.1);
+  --accent-2-glow: rgba(239, 68, 68, 0.12);
+
+  --accent-cool: #7c3aed;   /* Violet — LLM calls */
+  --accent-cool-hover: #6d28d9;
+  --accent-cool-glow: rgba(124, 58, 237, 0.15);
 
   /* Status */
   --success: #10b981;
@@ -202,7 +208,7 @@ code {
 .btn-primary:hover {
   background-color: var(--accent-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2);
+  box-shadow: 0 10px 20px rgba(249, 115, 22, 0.2);
 }
 
 .btn-secondary {
@@ -369,6 +375,160 @@ code {
 }
 
 /* ============================================================================
+   MONOSPACE & CODE UTILITIES
+   ============================================================================ */
+
+.mono {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Cascadia Code', monospace;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.terminal {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  overflow-x: auto;
+  position: relative;
+}
+
+.terminal::before {
+  content: '';
+  position: absolute;
+  top: var(--spacing-md);
+  left: var(--spacing-lg);
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.terminal code {
+  display: block;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: #e2e8f0;
+  font-family: 'Monaco', 'Menlo', monospace;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* ============================================================================
+   FEATURE SECTION NUMBERING (01, 02, 03)
+   ============================================================================ */
+
+.numbered-feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-3xl);
+  align-items: center;
+  margin: var(--spacing-3xl) 0;
+}
+
+.numbered-feature.reverse {
+  direction: rtl;
+}
+
+.numbered-feature.reverse > * {
+  direction: ltr;
+}
+
+.feature-number {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--accent);
+  opacity: 0.3;
+  margin-bottom: var(--spacing-lg);
+}
+
+.feature-number strong {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.feature-visual {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================================
+   LOGO STRIP MARQUEE
+   ============================================================================ */
+
+.logo-strip {
+  display: flex;
+  gap: var(--spacing-xl);
+  overflow: hidden;
+  opacity: 0.5;
+  transition: opacity var(--transition-base);
+}
+
+.logo-strip:hover {
+  opacity: 0.8;
+}
+
+.logo-item {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.marquee-wrapper {
+  overflow: hidden;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: var(--spacing-lg) 0;
+}
+
+.marquee {
+  display: flex;
+  gap: var(--spacing-xl);
+  animation: marquee 20s linear infinite;
+  will-change: transform;
+}
+
+.marquee:hover {
+  animation-play-state: paused;
+}
+
+.marquee > * {
+  flex-shrink: 0;
+}
+
+/* ============================================================================
+   BADGE VARIANTS
+   ============================================================================ */
+
+.badge-orange {
+  background-color: rgba(249, 115, 22, 0.1);
+  color: var(--accent);
+}
+
+.badge-red {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--accent-2);
+}
+
+/* ============================================================================
    GLOW EFFECTS
    ============================================================================ */
 
@@ -389,6 +549,46 @@ code {
 }
 
 .glow-accent:hover::before {
+  opacity: 1;
+}
+
+.glow-orange {
+  position: relative;
+}
+
+.glow-orange::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, var(--accent-glow), transparent 70%);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glow-orange:hover::before {
+  opacity: 1;
+}
+
+.glow-red {
+  position: relative;
+}
+
+.glow-red::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, var(--accent-2-glow), transparent 70%);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity var(--transition-slow);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.glow-red:hover::before {
   opacity: 1;
 }
 
@@ -509,6 +709,16 @@ code {
     gap: var(--spacing-md);
   }
 
+  .numbered-feature {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2xl);
+    margin: var(--spacing-2xl) 0;
+  }
+
+  .feature-visual {
+    min-height: 200px;
+  }
+
   .btn {
     width: 100%;
   }
@@ -542,4 +752,5 @@ code {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
+  border-radius: 4px;
 }
