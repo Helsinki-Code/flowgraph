@@ -855,14 +855,14 @@ import Public from "../layouts/Public.astro";
           <div class="code-path">agent.js</div>
         </div>
         <div class="code-block">
-          <code><span style="color: #7c3aed;">import</span> { LocalCollector } <span style="color: #7c3aed;">from</span> <span style="color: #22c55e;">"@flamegraph/sdk"</span>;
+          <code>{`import { LocalCollector } from "@flamegraph/sdk";
 
-<span style="color: #7c3aed;">const</span> collector = <span style="color: #7c3aed;">new</span> LocalCollector({
-  serverUrl: <span style="color: #f59e0b;">process.env.FLAMEGRAPH_URL</span>,
-  apiKey: <span style="color: #f59e0b;">process.env.FLAMEGRAPH_API_KEY</span>,
+const collector = new LocalCollector({
+  serverUrl: process.env.FLAMEGRAPH_URL,
+  apiKey: process.env.FLAMEGRAPH_API_KEY,
 });
 
-<span style="color: #7c3aed;">instrumentAgent</span>(agent, { collector });</code>
+instrumentAgent(agent, { collector });`}</code>
         </div>
       </div>
       <button class="copy-btn">Copy code</button>
