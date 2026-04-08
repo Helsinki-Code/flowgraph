@@ -7,7 +7,12 @@ export default defineConfig({
   adapter: vercel({
     maxDuration: 30,
   }),
-  integrations: [clerk()],
+  integrations: [
+    clerk({
+      signInFallbackRedirectUrl: "/app",
+      signUpFallbackRedirectUrl: "/app",
+    }),
+  ],
   vite: {
     define: {
       "process.env.API_URL": JSON.stringify(process.env.API_URL || "http://localhost:3000"),
