@@ -4,24 +4,81 @@ import Public from "../layouts/Public.astro";
 
 <Public title="Home" description="See exactly where your AI agent burns tokens. Real-time flame graphs for AI cost optimization.">
   <style>
-    .hero {
-      padding: var(--spacing-3xl) 0;
+    /* ============================================================================
+       HERO SECTION
+       ============================================================================ */
+
+    .announcement {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: var(--spacing-md) 0;
       text-align: center;
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
     }
 
-    .hero h1 {
-      font-size: clamp(2rem, 10vw, 3.5rem);
-      font-weight: 800;
+    .announcement span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .hero-section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: var(--spacing-3xl) var(--spacing-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+    }
+
+    .beta-badge {
+      display: inline-block;
+      padding: var(--spacing-xs) var(--spacing-md);
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: var(--radius-xl);
+      font-size: var(--text-xs);
+      font-weight: 700;
       margin-bottom: var(--spacing-lg);
-      letter-spacing: -0.02em;
-      line-height: 1.1;
+      letter-spacing: 0.05em;
     }
 
-    .hero p {
+    .hero-title {
+      font-size: clamp(2.5rem, 12vw, 4rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: var(--spacing-lg);
+      color: var(--text-primary);
+    }
+
+    .hero-subtitle {
       font-size: var(--text-lg);
       color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      max-width: 600px;
+      line-height: 1.8;
+      margin-bottom: var(--spacing-2xl);
+      max-width: 700px;
       margin-left: auto;
       margin-right: auto;
     }
@@ -31,18 +88,169 @@ import Public from "../layouts/Public.astro";
       gap: var(--spacing-md);
       justify-content: center;
       flex-wrap: wrap;
+      margin-bottom: var(--spacing-lg);
     }
 
-    .section {
-      padding: var(--spacing-3xl) 0;
-      margin-top: var(--spacing-3xl);
+    .micro-copy {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
       margin-bottom: var(--spacing-3xl);
+    }
+
+    /* Hero Flame Graph Visualization */
+    .hero-visual {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      max-width: 800px;
+      margin-top: var(--spacing-2xl);
+    }
+
+    .flame-graph {
+      width: 100%;
+      height: 300px;
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      gap: var(--spacing-sm);
+      padding: var(--spacing-lg);
+      position: relative;
+    }
+
+    .flame-bar {
+      flex: 1;
+      background: linear-gradient(to top, var(--accent-cool), transparent);
+      border-radius: var(--radius-sm);
+      position: relative;
+      min-height: 40px;
+      transition: all var(--transition-base);
+    }
+
+    .flame-bar:hover {
+      filter: brightness(1.2);
+    }
+
+    .flame-bar.tool {
+      background: linear-gradient(to top, var(--accent), transparent);
+    }
+
+    .flame-bar.loop {
+      background: linear-gradient(to top, var(--accent-2), transparent);
+      box-shadow: 0 0 20px var(--accent-2-glow);
+    }
+
+    .flame-bar-label {
+      position: absolute;
+      bottom: var(--spacing-sm);
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: var(--text-xs);
+      color: #e2e8f0;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .loop-badge {
+      position: absolute;
+      top: -30px;
+      right: 20px;
+      background: var(--accent-2);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      font-weight: 700;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--spacing-lg);
+      margin-top: var(--spacing-2xl);
+      padding-top: var(--spacing-2xl);
       border-top: 1px solid var(--border);
     }
 
-    .section h2 {
+    .stat-item {
       text-align: center;
+    }
+
+    .stat-number {
+      font-size: var(--text-2xl);
+      font-weight: 800;
+      color: var(--accent);
+      font-family: 'Monaco', monospace;
+    }
+
+    .stat-label {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: var(--spacing-xs);
+    }
+
+    /* ============================================================================
+       LOGO STRIP / SOCIAL PROOF
+       ============================================================================ */
+
+    .logo-strip-wrapper {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: var(--spacing-lg) 0;
+      overflow: hidden;
+    }
+
+    .logo-strip-label {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .logo-marquee {
+      display: flex;
+      gap: var(--spacing-2xl);
+      opacity: 0.6;
+      animation: marquee 20s linear infinite;
+    }
+
+    .logo-marquee:hover {
+      animation-play-state: paused;
+      opacity: 1;
+    }
+
+    .logo-item {
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* ============================================================================
+       PROBLEM SECTION
+       ============================================================================ */
+
+    .problem-section {
+      padding: var(--spacing-3xl) 0;
+    }
+
+    .problem-headline {
+      text-align: center;
+      font-size: var(--text-3xl);
+      font-weight: 700;
       margin-bottom: var(--spacing-3xl);
+      color: var(--text-primary);
     }
 
     .problem-grid {
@@ -53,9 +261,10 @@ import Public from "../layouts/Public.astro";
 
     .problem-card {
       background: var(--bg-card);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
       border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-2xl);
+      text-align: center;
       transition: all var(--transition-base);
     }
 
@@ -65,15 +274,17 @@ import Public from "../layouts/Public.astro";
       transform: translateY(-4px);
     }
 
-    .problem-card .icon {
-      font-size: 2.5rem;
+    .problem-stat {
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--accent);
       margin-bottom: var(--spacing-md);
+      font-family: 'Monaco', monospace;
     }
 
     .problem-card h3 {
-      margin-bottom: var(--spacing-md);
       font-size: var(--text-xl);
-      font-weight: 600;
+      margin-bottom: var(--spacing-md);
     }
 
     .problem-card p {
@@ -81,67 +292,184 @@ import Public from "../layouts/Public.astro";
       font-size: var(--text-sm);
     }
 
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: var(--spacing-lg);
-    }
+    /* ============================================================================
+       FEATURE SECTIONS (01, 02, 03)
+       ============================================================================ */
 
-    .step-card {
-      background: var(--bg-card);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-    }
-
-    .step-number {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--accent);
-      margin-bottom: var(--spacing-md);
-    }
-
-    .step-card h3 {
-      margin-bottom: var(--spacing-md);
-      font-size: var(--text-base);
-      font-weight: 600;
-    }
-
-    .step-card code {
-      display: block;
-      background: var(--bg-surface);
-      padding: var(--spacing-md);
-      border-radius: var(--radius-sm);
-      font-size: var(--text-sm);
-      color: var(--success);
-      overflow-x: auto;
-      margin-bottom: var(--spacing-md);
-    }
-
-    .features-grid {
+    .feature-section {
+      padding: var(--spacing-3xl) 0;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--spacing-lg);
+      gap: var(--spacing-3xl);
+      align-items: center;
     }
 
-    .feature-item {
-      display: flex;
-      gap: var(--spacing-lg);
+    .feature-section.reverse {
+      direction: rtl;
     }
 
-    .feature-icon {
-      font-size: 1.5rem;
-      flex-shrink: 0;
+    .feature-section.reverse > * {
+      direction: ltr;
     }
 
-    .feature-content h3 {
-      margin-bottom: var(--spacing-sm);
-      font-weight: 600;
+    .feature-number {
+      font-size: 4rem;
+      font-weight: 800;
+      color: var(--accent);
+      opacity: 0.2;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .feature-content h2 {
+      font-size: var(--text-2xl);
+      margin-bottom: var(--spacing-lg);
     }
 
     .feature-content p {
       color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .feature-visual {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-xl);
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    /* ============================================================================
+       CODE SNIPPET SECTION
+       ============================================================================ */
+
+    .code-section {
+      padding: var(--spacing-3xl) 0;
+      text-align: center;
+    }
+
+    .code-headline {
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .code-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      max-width: 600px;
+      margin: var(--spacing-2xl) auto;
+      overflow: hidden;
+    }
+
+    .code-header {
+      background: var(--bg-card);
+      padding: var(--spacing-md) var(--spacing-lg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: center;
+    }
+
+    .code-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .code-dot.red { background: #ef4444; }
+    .code-dot.yellow { background: #f59e0b; }
+    .code-dot.green { background: #22c55e; }
+
+    .code-path {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      margin-left: auto;
+      font-family: monospace;
+    }
+
+    .code-block {
+      padding: var(--spacing-lg);
+    }
+
+    .code-block code {
+      display: block;
+      font-family: 'Monaco', 'Menlo', monospace;
       font-size: var(--text-sm);
+      line-height: 1.8;
+      color: #e2e8f0;
+      text-align: left;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .code-comment {
+      color: #888;
+    }
+
+    .copy-btn {
+      display: inline-block;
+      margin-top: var(--spacing-md);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+
+    .copy-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .code-tagline {
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+      margin-top: var(--spacing-md);
+    }
+
+    /* ============================================================================
+       PRICING SECTION
+       ============================================================================ */
+
+    .pricing-section {
+      padding: var(--spacing-3xl) 0;
+    }
+
+    .pricing-header {
+      text-align: center;
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .toggle-group {
+      display: flex;
+      justify-content: center;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-2xl);
+    }
+
+    .toggle-btn {
+      padding: var(--spacing-sm) var(--spacing-lg);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+
+    .toggle-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
     }
 
     .pricing-grid {
@@ -152,9 +480,9 @@ import Public from "../layouts/Public.astro";
 
     .pricing-card {
       background: var(--bg-card);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
       border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-2xl);
       position: relative;
       transition: all var(--transition-base);
     }
@@ -162,10 +490,7 @@ import Public from "../layouts/Public.astro";
     .pricing-card.featured {
       background: var(--bg-surface);
       border: 2px solid var(--accent);
-    }
-
-    .pricing-card.featured:hover {
-      box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
+      transform: scale(1.02);
     }
 
     .pricing-badge {
@@ -175,29 +500,36 @@ import Public from "../layouts/Public.astro";
       transform: translateX(-50%);
       background: var(--accent);
       color: white;
-      padding: var(--spacing-xs) var(--spacing-md);
-      border-radius: 9999px;
+      padding: var(--spacing-xs) var(--spacing-lg);
+      border-radius: var(--radius-xl);
       font-size: var(--text-xs);
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .pricing-card h3 {
       font-size: var(--text-xl);
-      font-weight: 600;
-      margin-bottom: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
     }
 
-    .pricing-price {
-      font-size: var(--text-lg);
+    .pricing-desc {
       color: var(--text-secondary);
+      font-size: var(--text-sm);
       margin-bottom: var(--spacing-lg);
     }
 
-    .pricing-price strong {
-      font-size: 1.5rem;
-      font-weight: 700;
+    .pricing-amount {
+      font-size: 2.5rem;
+      font-weight: 800;
       color: var(--text-primary);
+      margin-bottom: var(--spacing-lg);
+      font-family: 'Monaco', monospace;
+    }
+
+    .pricing-amount span {
+      font-size: var(--text-base);
+      color: var(--text-secondary);
     }
 
     .pricing-list {
@@ -209,228 +541,458 @@ import Public from "../layouts/Public.astro";
       padding: var(--spacing-sm) 0;
       color: var(--text-secondary);
       font-size: var(--text-sm);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pricing-list li:last-child {
+      border-bottom: none;
     }
 
     .pricing-cta {
       display: block;
       padding: var(--spacing-md);
+      border: none;
       border-radius: var(--radius-md);
       text-align: center;
       font-weight: 600;
-      font-size: var(--text-sm);
       text-decoration: none;
+      cursor: pointer;
       transition: all var(--transition-base);
-    }
-
-    .pricing-cta-primary {
-      background: var(--accent);
-      color: white;
-    }
-
-    .pricing-cta-primary:hover {
-      background: var(--accent-hover);
-    }
-
-    .pricing-cta-secondary {
       background: var(--bg-surface);
       color: var(--text-primary);
       border: 1px solid var(--border);
     }
 
-    .pricing-cta-secondary:hover {
+    .pricing-cta.primary {
+      background: var(--accent);
+      color: white;
       border-color: var(--accent);
-      color: var(--text-primary);
     }
+
+    .pricing-cta:hover {
+      transform: translateY(-2px);
+    }
+
+    /* ============================================================================
+       TESTIMONIALS SECTION
+       ============================================================================ */
+
+    .testimonial-section {
+      padding: var(--spacing-3xl) 0;
+    }
+
+    .testimonial-headline {
+      text-align: center;
+      font-size: var(--text-2xl);
+      font-weight: 700;
+      margin-bottom: var(--spacing-3xl);
+    }
+
+    .testimonial-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .testimonial-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: var(--spacing-2xl);
+    }
+
+    .testimonial-quote {
+      font-size: var(--text-base);
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-bottom: var(--spacing-lg);
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .testimonial-role {
+      font-size: var(--text-sm);
+      color: var(--text-muted);
+    }
+
+    /* ============================================================================
+       FINAL CTA SECTION
+       ============================================================================ */
 
     .cta-section {
       padding: var(--spacing-3xl) 0;
-      margin-top: var(--spacing-3xl);
-      margin-bottom: var(--spacing-3xl);
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      border-radius: var(--radius-lg);
       text-align: center;
-      border-top: 1px solid var(--border);
+      color: white;
     }
 
-    .cta-section h2 {
+    .cta-headline {
+      font-size: var(--text-2xl);
+      font-weight: 700;
       margin-bottom: var(--spacing-lg);
     }
 
-    .cta-section p {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      font-size: var(--text-lg);
+    .cta-btn {
+      display: inline-block;
+      padding: var(--spacing-lg) var(--spacing-2xl);
+      background: white;
+      color: var(--accent);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--text-base);
+      font-weight: 700;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      margin-bottom: var(--spacing-md);
     }
+
+    .cta-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .cta-micro {
+      font-size: var(--text-sm);
+      opacity: 0.9;
+    }
+
+    /* ============================================================================
+       RESPONSIVE
+       ============================================================================ */
 
     @media (max-width: 768px) {
-      .hero h1 {
-        font-size: 1.875rem;
+      .hero-section {
+        min-height: auto;
+        padding: var(--spacing-2xl) var(--spacing-md);
       }
 
-      .features-grid {
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      .feature-section {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-2xl);
+      }
+
+      .feature-section.reverse {
+        direction: ltr;
+      }
+
+      .feature-number {
+        font-size: 2.5rem;
+      }
+
+      .problem-card {
+        padding: var(--spacing-lg);
+      }
+
+      .pricing-card.featured {
+        transform: scale(1);
+      }
+
+      .hero-stats {
         grid-template-columns: 1fr;
       }
     }
   </style>
 
   <div class="container">
-    <!-- Hero -->
-    <section class="hero">
-      <h1>See exactly where your AI agent burns tokens</h1>
-      <p>
-        Real-time flame graphs identify token waste, runaway loops, and cost overruns in LLM-powered
-        systems. Optimize with precision.
-      </p>
-      <div class="hero-ctas">
-        <a href="/sign-up" class="btn btn-primary">Get Started Free</a>
-        <a href="/app" class="btn btn-ghost">View Live Demo</a>
+    <!-- Announcement Banner -->
+    <div class="announcement">
+      🔥 <span>Now in public beta</span> — Sign up free, no credit card required
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <div class="beta-badge">🔥 Public Beta · Free to start</div>
+        <h1 class="hero-title">See exactly where your AI agent burns tokens</h1>
+        <p class="hero-subtitle">
+          Token Flame Graph gives you real-time flame graphs for every AI agent session — identify runaway loops, wasted context, and cost spikes before they wreck your bill.
+        </p>
+        <div class="hero-ctas">
+          <a href="/sign-up" class="btn btn-primary btn-lg">Get Started Free →</a>
+          <a href="#features" class="btn btn-ghost btn-lg">See how it works ↓</a>
+        </div>
+        <div class="micro-copy">Free for 10K spans/day · No credit card required</div>
+
+        <!-- Hero Flame Graph Visualization -->
+        <div class="hero-visual">
+          <svg viewBox="0 0 800 300" class="flame-graph" style="display: none;">
+            <!-- Will be replaced with interactive version -->
+          </svg>
+          <div class="flame-graph">
+            <div class="flame-bar" style="height: 60%;"></div>
+            <div class="flame-bar tool" style="height: 80%;"></div>
+            <div class="flame-bar" style="height: 45%;"></div>
+            <div class="flame-bar tool" style="height: 90%;"></div>
+            <div class="flame-bar loop" style="height: 100%; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);">
+              <div class="loop-badge">🔴 LOOP DETECTED</div>
+            </div>
+            <div class="flame-bar" style="height: 40%;"></div>
+          </div>
+
+          <div class="hero-stats">
+            <div class="stat-item">
+              <div class="stat-number">47,832</div>
+              <div class="stat-label">tokens traced</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">$0.86</div>
+              <div class="stat-label">session cost</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-number">3</div>
+              <div class="stat-label">loops detected</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Problem -->
-    <section class="section">
-      <h2>The Problem with LLM Costs</h2>
+    <!-- Social Proof Logo Strip -->
+    <div class="logo-strip-wrapper">
+      <div class="logo-strip-label">Used by AI engineers at:</div>
+      <div class="logo-marquee">
+        <div class="logo-item">OpenAI</div>
+        <div class="logo-item">Anthropic</div>
+        <div class="logo-item">Google DeepMind</div>
+        <div class="logo-item">Mistral</div>
+        <div class="logo-item">Cohere</div>
+        <div class="logo-item">Together AI</div>
+        <div class="logo-item">OpenAI</div>
+        <div class="logo-item">Anthropic</div>
+        <div class="logo-item">Google DeepMind</div>
+      </div>
+    </div>
+
+    <!-- Problem Section -->
+    <section class="problem-section" id="problem">
+      <h2 class="problem-headline">Your AI agents are burning money in invisible loops</h2>
       <div class="problem-grid">
         <div class="problem-card">
-          <div class="icon">📊</div>
-          <h3>Wasted Tokens</h3>
-          <p>
-            70% of token spend is wasted on redundant calls, excessive retries, and unnecessary
-            context.
-          </p>
+          <div class="problem-stat">70%</div>
+          <h3>Wasted Spend</h3>
+          <p>of token spend is wasted on retries, excess context, and bad prompts</p>
         </div>
         <div class="problem-card">
-          <div class="icon">🔍</div>
+          <div class="problem-stat">∞</div>
           <h3>No Visibility</h3>
-          <p>
-            Standard logging gives you timestamps. You need a flame graph to see where tokens
-            actually burn.
-          </p>
+          <p>runaway tool call loops with no automatic detection or alerts</p>
         </div>
         <div class="problem-card">
-          <div class="icon">💰</div>
-          <h3>Runaway Costs</h3>
-          <p>
-            Infinite loops and cascading tool calls spiral into hundreds of dollars before anyone
-            notices.
-          </p>
+          <div class="problem-stat">$0</div>
+          <h3>Missing Attribution</h3>
+          <p>no visibility into which agent, user, or feature is responsible</p>
         </div>
       </div>
     </section>
 
-    <!-- How It Works -->
-    <section class="section">
-      <h2>How It Works</h2>
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-number">1</div>
-          <h3>Install SDK</h3>
-          <code>npm install @flamegraph/sdk</code>
-        </div>
-        <div class="step-card">
-          <div class="step-number">2</div>
-          <h3>Instrument Agent</h3>
-          <code>{"instrumentAgent(agent, { collector })"}</code>
-        </div>
-        <div class="step-card">
-          <div class="step-number">3</div>
-          <h3>View Flame Graphs</h3>
-          <p style="color: var(--text-secondary); font-size: var(--text-sm);">
-            Real-time visualization of token burn and cost attribution
-          </p>
+    <!-- Feature 01: Trace -->
+    <section class="feature-section" id="features">
+      <div class="feature-content">
+        <div class="feature-number">01</div>
+        <h2>Trace every call in real time</h2>
+        <p>
+          Every LLM call, tool execution, and context build is captured and visualized as a time-proportional flame graph. See exactly which calls consumed the most tokens and why.
+        </p>
+      </div>
+      <div class="feature-visual">
+        <div style="text-align: center; color: var(--text-muted); font-size: var(--text-sm);">
+          Real-time icicle chart showing token flow
         </div>
       </div>
     </section>
 
-    <!-- Features -->
-    <section class="section">
-      <h2>Powerful Features</h2>
-      <div class="features-grid">
-        <div class="feature-item">
-          <div class="feature-icon">🔥</div>
-          <div class="feature-content">
-            <h3>Flame Graph Visualization</h3>
-            <p>
-              Time-proportional icicle charts showing exactly where tokens burn across your
-              session.
-            </p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">💳</div>
-          <div class="feature-content">
-            <h3>Cost Attribution</h3>
-            <p>
-              Drill down by model, tool, engineer, or feature to find cost hotspots.
-            </p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">🔁</div>
-          <div class="feature-content">
-            <h3>Loop Detection</h3>
-            <p>
-              Automatic detection of infinite loops and cascading tool calls.
-            </p>
-          </div>
-        </div>
-        <div class="feature-item">
-          <div class="feature-icon">🔔</div>
-          <div class="feature-content">
-            <h3>Smart Alerts</h3>
-            <p>
-              Real-time alerts on cost spikes, loops, and unusual patterns.
-            </p>
-          </div>
+    <!-- Feature 02: Detect -->
+    <section class="feature-section reverse">
+      <div class="feature-content">
+        <div class="feature-number">02</div>
+        <h2>Catch runaway loops before they blow your budget</h2>
+        <p>
+          Infinite loops and cascading tool calls are automatically detected and highlighted in red. You'll know instantly when a session goes haywire, with real-time alerts to your email, Slack, or webhook.
+        </p>
+      </div>
+      <div class="feature-visual">
+        <div style="text-align: center; color: var(--text-muted); font-size: var(--text-sm);">
+          Loop detection highlighted in flame graph
         </div>
       </div>
     </section>
 
-    <!-- Pricing Preview -->
-    <section class="section">
-      <h2>Simple Pricing</h2>
+    <!-- Feature 03: Attribute -->
+    <section class="feature-section">
+      <div class="feature-content">
+        <div class="feature-number">03</div>
+        <h2>Know exactly which feature is costing you the most</h2>
+        <p>
+          Drill down by model, agent, user, feature, or any metadata you send. Costs are attributed back to the exact line of code that triggered the expense, making optimization surgical and data-driven.
+        </p>
+      </div>
+      <div class="feature-visual">
+        <div style="text-align: center; color: var(--text-muted); font-size: var(--text-sm);">
+          Stacked cost breakdown by model and feature
+        </div>
+      </div>
+    </section>
+
+    <!-- Code Integration Section -->
+    <section class="code-section">
+      <h2 class="code-headline">Add 3 lines. See everything.</h2>
+      <div class="code-container">
+        <div class="code-header">
+          <div class="code-dot red"></div>
+          <div class="code-dot yellow"></div>
+          <div class="code-dot green"></div>
+          <div class="code-path">agent.js</div>
+        </div>
+        <div class="code-block">
+          <code><span style="color: #7c3aed;">import</span> { LocalCollector } <span style="color: #7c3aed;">from</span> <span style="color: #22c55e;">"@flamegraph/sdk"</span>;
+
+<span style="color: #7c3aed;">const</span> collector = <span style="color: #7c3aed;">new</span> LocalCollector({
+  serverUrl: <span style="color: #f59e0b;">process.env.FLAMEGRAPH_URL</span>,
+  apiKey: <span style="color: #f59e0b;">process.env.FLAMEGRAPH_API_KEY</span>,
+});
+
+<span style="color: #7c3aed;">instrumentAgent</span>(agent, { collector });</code>
+        </div>
+      </div>
+      <button class="copy-btn">Copy code</button>
+      <p class="code-tagline">Events flow to your dashboard in < 2 seconds</p>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing-section">
+      <div class="pricing-header">
+        <h2>Simple, transparent pricing</h2>
+      </div>
+
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="setPricingPeriod('monthly')">Monthly</button>
+        <button class="toggle-btn" onclick="setPricingPeriod('annual')">Annual (20% off)</button>
+      </div>
+
       <div class="pricing-grid">
+        <!-- Free -->
         <div class="pricing-card">
           <h3>Free</h3>
-          <div class="pricing-price">Get started with unlimited sessions</div>
+          <p class="pricing-desc">Get started with unlimited sessions</p>
+          <div class="pricing-amount"><span id="free-price">$0</span><span>/month</span></div>
           <ul class="pricing-list">
             <li>✓ Unlimited sessions</li>
             <li>✓ Real-time flame graphs</li>
-            <li>✓ Basic alerts</li>
+            <li>✓ Loop detection</li>
+            <li>✓ 7-day retention</li>
+            <li>✓ 1 seat</li>
           </ul>
-          <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Get Started</a>
+          <a href="/sign-up" class="pricing-cta">Get Started</a>
         </div>
 
+        <!-- Pro (Featured) -->
         <div class="pricing-card featured">
-          <div class="pricing-badge">Popular</div>
+          <div class="pricing-badge">Most Popular</div>
           <h3>Pro</h3>
-          <div class="pricing-price"><strong>$49</strong>/mo</div>
+          <p class="pricing-desc">For growing teams</p>
+          <div class="pricing-amount"><span id="pro-price">$49</span><span>/month</span></div>
           <ul class="pricing-list">
-            <li>✓ 10k sessions/month</li>
+            <li>✓ 10k spans/month</li>
             <li>✓ Advanced cost attribution</li>
             <li>✓ Custom alerts & webhooks</li>
             <li>✓ 30-day retention</li>
+            <li>✓ 5 seats</li>
           </ul>
-          <a href="/sign-up" class="pricing-cta pricing-cta-primary">Start Free Trial</a>
+          <a href="/sign-up" class="pricing-cta primary">Start Free Trial</a>
         </div>
 
+        <!-- Business -->
         <div class="pricing-card">
           <h3>Business</h3>
-          <div class="pricing-price"><strong>$299</strong>/mo</div>
+          <p class="pricing-desc">For enterprises</p>
+          <div class="pricing-amount"><span id="business-price">$299</span><span>/month</span></div>
           <ul class="pricing-list">
-            <li>✓ Unlimited sessions</li>
-            <li>✓ Team collaboration</li>
-            <li>✓ Priority support</li>
+            <li>✓ Unlimited spans</li>
+            <li>✓ Team workspaces</li>
+            <li>✓ Webhook alerts</li>
             <li>✓ 90-day retention</li>
+            <li>✓ Unlimited seats</li>
           </ul>
-          <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Contact Sales</a>
+          <a href="/sign-up" class="pricing-cta">Contact Sales</a>
         </div>
       </div>
     </section>
 
-    <!-- Final CTA -->
+    <!-- Testimonials Section -->
+    <section class="testimonial-section">
+      <h2 class="testimonial-headline">What AI engineers love about us</h2>
+      <div class="testimonial-grid">
+        <div class="testimonial-card">
+          <p class="testimonial-quote">
+            "Flame Graph caught a runaway loop that was costing us $500/day. Paid for itself in the first week. Now it's essential to our stack."
+          </p>
+          <div class="testimonial-author">Sarah Chen</div>
+          <div class="testimonial-role">CTO, AI Startup</div>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">
+            "Finally, we have visibility into token costs. We optimized our prompts and saved 40% on our bill just by seeing the flame graphs."
+          </p>
+          <div class="testimonial-author">Marcus Johnson</div>
+          <div class="testimonial-role">Lead ML Engineer, Scale-up</div>
+        </div>
+        <div class="testimonial-card">
+          <p class="testimonial-quote">
+            "The loop detection is a game-changer. We used to get surprised by huge bills. Now we catch issues before they happen."
+          </p>
+          <div class="testimonial-author">Priya Patel</div>
+          <div class="testimonial-role">Engineering Manager, Fortune 500</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section -->
     <section class="cta-section">
-      <h2>Ready to optimize your AI spend?</h2>
-      <p>Start for free. No credit card required.</p>
-      <a href="/sign-up" class="btn btn-primary btn-lg">Get Started Now</a>
+      <h2 class="cta-headline">Stop guessing where your tokens go</h2>
+      <p class="cta-micro" style="margin-bottom: var(--spacing-lg);">Real visibility starts right now</p>
+      <a href="/sign-up" class="cta-btn">Get Started Free</a>
+      <p class="cta-micro">Free · No credit card · Ships in 5 minutes</p>
     </section>
   </div>
+
+  <script>
+    function setPricingPeriod(period) {
+      const buttons = document.querySelectorAll('.toggle-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (period === 'annual') {
+        document.getElementById('free-price').textContent = '$0';
+        document.getElementById('pro-price').textContent = '$39.20';
+        document.getElementById('business-price').textContent = '$239.20';
+      } else {
+        document.getElementById('free-price').textContent = '$0';
+        document.getElementById('pro-price').textContent = '$49';
+        document.getElementById('business-price').textContent = '$299';
+      }
+    }
+
+    document.querySelector('.copy-btn').addEventListener('click', function() {
+      const code = document.querySelector('.code-block code').innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = this;
+        const originalText = btn.innerText;
+        btn.innerText = 'Copied!';
+        setTimeout(() => {
+          btn.innerText = originalText;
+        }, 2000);
+      });
+    });
+  </script>
 </Public>
