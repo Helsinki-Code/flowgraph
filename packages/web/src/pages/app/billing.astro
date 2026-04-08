@@ -67,7 +67,7 @@ const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimi
         {limits.cost}/month
       </div>
       {workspace.plan === "free" && (
-        <a href="/pricing" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "#6366f1", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600" }}>
+        <a href="/pricing" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "#f97316", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600" }}>
           Upgrade to Pro
         </a>
       )}
@@ -87,7 +87,7 @@ const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimi
             <div
               style={{
                 height: "100%",
-                background: "#6366f1",
+                background: "#f97316",
                 width: `${Math.min((workspace.sessions_this_month / limits.sessions) * 100, 100)}%`,
               }}
             />

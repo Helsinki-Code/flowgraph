@@ -6,15 +6,20 @@ import { API_URL } from "../../lib/api";
 
 let userId, orgId, token;
 try {
-  const auth = Astro.locals.auth();
-  userId = auth.userId;
-  orgId = auth.orgId;
-  token = await auth.getToken();
-} catch (e) {
-  return Astro.redirect("/sign-in");
-}
+  if (!Astro.locals?.auth) {
+    return Astro.redirect("/sign-in");
+  }
 
-if (!userId) {
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  orgId = auth?.orgId;
+  token = auth?.getToken ? await auth.getToken() : null;
+
+  if (!userId) {
+    return Astro.redirect("/sign-in");
+  }
+} catch (e) {
+  console.error("Auth error in /app/cost:", e);
   return Astro.redirect("/sign-in");
 }
 
@@ -23,14 +28,22 @@ const workspaceId = orgId || userId;
 let breakdown = {};
 let error = null;
 
-try {
-  const response = await fetch(`${API_URL}/v1/cost/breakdown?workspace_id=${workspaceId}&group_by=${groupBy}`, {
-    headers: { "Authorization": `Bearer ${token}` },
-  });
-  const data = await response.json();
-  breakdown = data.breakdown || {};
-} catch (e: any) {
-  error = `Failed to load cost breakdown`;
+if (workspaceId && token) {
+  try {
+    const response = await fetch(`${API_URL}/v1/cost/breakdown?workspace_id=${workspaceId}&group_by=${groupBy}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      error = `API Error: ${response.status} ${response.statusText}`;
+    } else {
+      const data = await response.json();
+      breakdown = data.breakdown || {};
+    }
+  } catch (e: any) {
+    error = `Failed to load cost breakdown: ${e.message}`;
+  }
+} else {
+  error = "Missing authentication data";
 }
 
 const items = Object.entries(breakdown)

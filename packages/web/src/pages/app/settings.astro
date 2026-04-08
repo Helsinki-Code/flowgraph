@@ -1,0 +1,234 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../layouts/Dashboard.astro";
+import { API_URL } from "../../lib/api";
+
+let userId, orgId, token;
+try {
+  if (!Astro.locals?.auth) {
+    return Astro.redirect("/sign-in");
+  }
+
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  orgId = auth?.orgId;
+  token = auth?.getToken ? await auth.getToken() : null;
+
+  if (!userId) {
+    return Astro.redirect("/sign-in");
+  }
+} catch (e) {
+  console.error("Auth error in /app/settings:", e);
+  return Astro.redirect("/sign-in");
+}
+
+const workspaceId = orgId || userId;
+let error = null;
+---
+
+<Dashboard title="Settings" description="API keys and workspace configuration">
+  {error && <div style={{ padding: "1rem", background: "#7f1d1d", color: "#fca5a5", borderRadius: "0.375rem", marginBottom: "1.5rem" }}>{error}</div>}
+
+  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "2rem", maxWidth: "800px" }}>
+    <!-- API Keys Section -->
+    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>API Keys</h3>
+      <p style={{ color: "#94a3b8", marginBottom: "1.5rem", lineHeight: "1.6" }}>
+        Your API key authenticates the SDK when sending spans to our collector. It starts with <code style={{ background: "#0f172a", padding: "0.2rem 0.5rem", borderRadius: "0.25rem", fontFamily: "monospace", fontSize: "0.9rem" }}>sk_</code>.
+      </p>
+
+      <div style={{ marginBottom: "1.5rem" }}>
+        <button
+          id="generate-key-btn"
+          style={{
+            padding: "0.75rem 1.5rem",
+            background: "#f97316",
+            color: "white",
+            border: "none",
+            borderRadius: "0.375rem",
+            fontWeight: "600",
+            cursor: "pointer",
+            transition: "background 0.2s",
+          }}
+          onmouseover="this.style.background='#ea580c'"
+          onmouseout="this.style.background='#f97316'"
+        >
+          Generate New Key
+        </button>
+      </div>
+
+      <!-- API Key Display Area -->
+      <div id="key-display" style={{ display: "none" }}>
+        <div style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", marginBottom: "1rem", position: "relative", border: "1px solid #334155" }}>
+          <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Your API Key</div>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <code
+              id="api-key-value"
+              style={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: "0.875rem",
+                color: "#f97316",
+                wordBreak: "break-all",
+                flex: 1,
+              }}
+            ></code>
+            <button
+              id="copy-key-btn"
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#334155",
+                color: "#e2e8f0",
+                border: "none",
+                borderRadius: "0.25rem",
+                cursor: "pointer",
+                fontSize: "0.875rem",
+                whiteSpace: "nowrap",
+                transition: "background 0.2s",
+              }}
+              onmouseover="this.style.background='#475569'"
+              onmouseout="this.style.background='#334155'"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+
+        <div style={{ background: "#7c2d12", color: "#fed7aa", padding: "0.75rem 1rem", borderRadius: "0.375rem", marginBottom: "1.5rem", border: "1px solid #f97316", fontSize: "0.875rem", lineHeight: "1.5" }}>
+          ⚠️ <strong>Security:</strong> This key is shown only once. Store it securely (e.g., `.env` file). If you lose it, generate a new one.
+        </div>
+      </div>
+    </div>
+
+    <!-- Integration Section -->
+    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Integration</h3>
+      <p style={{ color: "#94a3b8", marginBottom: "1rem" }}>Use these values in your SDK configuration.</p>
+
+      <div style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", marginBottom: "1.5rem", border: "1px solid #334155" }}>
+        <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Server URL</div>
+        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.875rem", color: "#e2e8f0", wordBreak: "break-all" }}>
+          {API_URL}
+        </div>
+      </div>
+
+      <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginBottom: "1rem" }}>
+        <strong>Quick Start Code:</strong>
+      </div>
+      <div style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", border: "1px solid #334155", position: "relative", marginBottom: "1.5rem" }}>
+        <button
+          id="copy-code-btn"
+          style={{
+            position: "absolute",
+            top: "0.75rem",
+            right: "0.75rem",
+            padding: "0.5rem 1rem",
+            background: "#334155",
+            color: "#e2e8f0",
+            border: "none",
+            borderRadius: "0.25rem",
+            cursor: "pointer",
+            fontSize: "0.75rem",
+            transition: "background 0.2s",
+          }}
+          onmouseover="this.style.background='#475569'"
+          onmouseout="this.style.background='#334155'"
+        >
+          Copy
+        </button>
+        <pre style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.875rem", color: "#e2e8f0", margin: 0, overflow: "auto", whiteSpace: "pre-wrap", wordWrap: "break-word", paddingRight: "100px" }}>
+{`import { LocalCollector } from "@flamegraph/sdk";
+
+instrumentAgent(agent, {
+  collector: new LocalCollector({
+    serverUrl: "${API_URL}",
+    apiKey: "sk_your_key_here" // from Settings
+  })
+});`}
+        </pre>
+      </div>
+    </div>
+
+    <!-- Workspace Section -->
+    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Workspace</h3>
+      <div style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", border: "1px solid #334155" }}>
+        <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginBottom: "0.5rem", textTransform: "uppercase" }}>Workspace ID</div>
+        <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.875rem", color: "#e2e8f0" }}>
+          {workspaceId}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script define:vars={{ API_URL, token }}>
+    const generateBtn = document.getElementById("generate-key-btn");
+    const keyDisplay = document.getElementById("key-display");
+    const keyValue = document.getElementById("api-key-value");
+    const copyKeyBtn = document.getElementById("copy-key-btn");
+    const copyCodeBtn = document.getElementById("copy-code-btn");
+
+    generateBtn.addEventListener("click", async () => {
+      generateBtn.disabled = true;
+      generateBtn.textContent = "Generating...";
+
+      try {
+        const response = await fetch(`${API_URL}/v1/workspace/api-keys`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          alert(`Failed: ${response.status} ${response.statusText}`);
+          generateBtn.disabled = false;
+          generateBtn.textContent = "Generate New Key";
+          return;
+        }
+
+        const data = await response.json();
+        keyValue.textContent = data.apiKey;
+        keyDisplay.style.display = "block";
+        generateBtn.textContent = "Generate Another Key";
+        generateBtn.disabled = false;
+      } catch (err) {
+        alert(`Error: ${err.message}`);
+        generateBtn.disabled = false;
+        generateBtn.textContent = "Generate New Key";
+      }
+    });
+
+    copyKeyBtn.addEventListener("click", async () => {
+      const keyText = keyValue.textContent;
+      if (!keyText) return;
+
+      try {
+        await navigator.clipboard.writeText(keyText);
+        const originalText = copyKeyBtn.textContent;
+        copyKeyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyKeyBtn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        alert("Failed to copy");
+      }
+    });
+
+    copyCodeBtn.addEventListener("click", async () => {
+      const codeText = `import { LocalCollector } from "@flamegraph/sdk";\n\ninstrumentAgent(agent, {\n  collector: new LocalCollector({\n    serverUrl: "${API_URL}",\n    apiKey: "sk_your_key_here" // from Settings\n  })\n});`;
+
+      try {
+        await navigator.clipboard.writeText(codeText);
+        const originalText = copyCodeBtn.textContent;
+        copyCodeBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyCodeBtn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        alert("Failed to copy");
+      }
+    });
+  </script>
+</Dashboard>
