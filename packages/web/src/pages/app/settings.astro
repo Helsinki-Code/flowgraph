@@ -177,12 +177,13 @@ instrumentAgent(agent, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
           },
         });
 
         if (!response.ok) {
-          alert(`Failed: ${response.status} ${response.statusText}`);
+          const errData = await response.text();
+          console.error(`API Error ${response.status}:`, errData);
+          alert(`Failed: ${response.status} ${response.statusText}\n${errData}`);
           generateBtn.disabled = false;
           generateBtn.textContent = "Generate New Key";
           return;
