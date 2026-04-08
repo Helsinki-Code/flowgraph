@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm install && npm run build --workspace=packages/web",
+  "outputDirectory": "packages/web/dist",
+  "framework": "astro",
+  "installCommand": "npm install"
+}

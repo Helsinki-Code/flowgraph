@@ -20,15 +20,3 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
-
-  - type: web
-    name: flowgraph-web
-    env: node
-    plan: starter
-    buildCommand: npm install && npm run build --workspace=packages/web
-    startCommand: npx astro preview --host 0.0.0.0
-    envVars:
-      - key: PUBLIC_API_URL
-        sync: false
-      - key: PUBLIC_CLERK_PUBLISHABLE_KEY
-        sync: false
