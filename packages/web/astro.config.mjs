@@ -1,8 +1,12 @@
 import { defineConfig } from "astro/config";
 import clerk from "@clerk/astro";
+import vercel from "@astrojs/vercel/serverless";
 
 export default defineConfig({
-  output: "static",
+  output: "hybrid",
+  adapter: vercel({
+    maxDuration: 30,
+  }),
   integrations: [clerk()],
   vite: {
     define: {
