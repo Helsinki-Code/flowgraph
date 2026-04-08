@@ -1,0 +1,159 @@
+---
+// Astro component: Flame Graph Viewer
+// Pure HTML/CSS/Vanilla JS, no React needed
+
+interface Props {
+  tree: any;
+  sessionId: string;
+}
+
+const { tree, sessionId } = Astro.props;
+
+// Flatten tree for display
+function flattenTree(node: any, depth: number = 0): Array<any> {
+  const result = [{ ...node, depth }];
+  for (const child of node.children || []) {
+    result.push(...flattenTree(child, depth + 1));
+  }
+  return result;
+}
+
+const nodes = flattenTree(tree);
+const maxDepth = Math.max(...nodes.map((n: any) => n.depth || 0));
+const totalCost = tree?.costUsd || 0;
+
+function getColor(kind: string): string {
+  switch (kind) {
+    case "llm_call":
+      return "#3b82f6"; // blue
+    case "tool_exec":
+      return "#f97316"; // orange
+    case "context_build":
+      return "#10b981"; // green
+    case "turn":
+      return "#ef4444"; // red
+    case "session":
+      return "#8b5cf6"; // purple
+    default:
+      return "#6b7280"; // gray
+  }
+}
+---
+
+<div class="flame-graph-container">
+  <style>
+    .flame-graph-container {
+      background: #0f172a;
+      border-radius: 0.5rem;
+      border: 1px solid #334155;
+      overflow: hidden;
+      padding: 1rem;
+    }
+
+    .flame-graph {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .flame-row {
+      display: flex;
+      gap: 2px;
+      align-items: center;
+      height: 24px;
+    }
+
+    .flame-block {
+      height: 22px;
+      background: #3b82f6;
+      border: 1px solid #1e293b;
+      padding: 2px 4px;
+      color: #e2e8f0;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+    }
+
+    .flame-block:hover {
+      opacity: 0.8;
+    }
+
+    .flame-block.looped {
+      background: #dc2626;
+      border-color: #991b1b;
+    }
+
+    .flame-block.error {
+      background: #f97316;
+    }
+
+    .tooltip {
+      position: fixed;
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 0.375rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      z-index: 1000;
+      pointer-events: none;
+      max-width: 300px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .flame-label {
+      color: #94a3b8;
+      font-size: 0.75rem;
+      margin-right: 0.5rem;
+      min-width: 80px;
+    }
+
+    .flame-content {
+      flex: 1;
+      display: flex;
+      gap: 2px;
+      overflow-x: auto;
+    }
+
+    .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: #94a3b8;
+    }
+  </style>
+
+  {
+    nodes.length === 0 ? (
+      <div class="empty-state">No events to display</div>
+    ) : (
+      <div class="flame-graph">
+        {nodes.map((node: any, idx: number) => (
+          <div class="flame-row" key={idx}>
+            <div class="flame-label">
+              Depth {node.depth}
+            </div>
+            <div class="flame-content">
+              <div
+                class={`flame-block ${node.loopFlag ? "looped" : ""} ${node.isError ? "error" : ""}`}
+                style={{
+                  background: getColor(node.kind),
+                  width: `${Math.max(50, (node.durationMs / 1000) * 10)}px`,
+                }}
+                title={`${node.name} - ${node.durationMs.toFixed(0)}ms - $${node.costUsd?.toFixed(4)} - ${node.tokens} tokens`}
+              >
+                {node.name.slice(0, 20)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+</div>

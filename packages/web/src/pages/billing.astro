@@ -1,0 +1,97 @@
+---
+import Dashboard from "../layouts/Dashboard.astro";
+---
+
+<Dashboard title="Billing" description="Manage your subscription and view usage">
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
+    <div style={{ background: "#1e293b", border: "2px solid #3b82f6", borderRadius: "0.5rem", padding: "1.5rem" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1rem" }}>Pro</h3>
+      <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>
+        $49
+        <span style={{ fontSize: "1rem", color: "#94a3b8" }}>/month</span>
+      </div>
+      <div style={{ color: "#94a3b8", marginBottom: "1.5rem", fontSize: "0.875rem" }}>
+        Current Plan
+      </div>
+      <ul style={{ marginBottom: "1.5rem", fontSize: "0.875rem" }}>
+        <li style={{ marginBottom: "0.5rem" }}>✓ 5,000 sessions/month</li>
+        <li style={{ marginBottom: "0.5rem" }}>✓ 90-day retention</li>
+        <li style={{ marginBottom: "0.5rem" }}>✓ Cost alerts</li>
+        <li>✓ Up to 5 team members</li>
+      </ul>
+      <button
+        style={{
+          width: "100%",
+          padding: "0.75rem",
+          background: "#3b82f6",
+          color: "white",
+          border: "none",
+          borderRadius: "0.375rem",
+          fontWeight: "600",
+          cursor: "pointer",
+        }}
+      >
+        Manage Subscription
+      </button>
+    </div>
+
+    <div style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: "0.5rem", padding: "1.5rem" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1rem" }}>Business</h3>
+      <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>
+        $299
+        <span style={{ fontSize: "1rem", color: "#94a3b8" }}>/month</span>
+      </div>
+      <div style={{ color: "#94a3b8", marginBottom: "1.5rem", fontSize: "0.875rem" }}>
+        For large teams
+      </div>
+      <ul style={{ marginBottom: "1.5rem", fontSize: "0.875rem" }}>
+        <li style={{ marginBottom: "0.5rem" }}>✓ Unlimited sessions</li>
+        <li style={{ marginBottom: "0.5rem" }}>✓ 365-day retention</li>
+        <li style={{ marginBottom: "0.5rem" }}>✓ Advanced alerts</li>
+        <li style={{ marginBottom: "0.5rem" }}>✓ API access</li>
+        <li>✓ Unlimited team members</li>
+      </ul>
+      <button
+        style={{
+          width: "100%",
+          padding: "0.75rem",
+          background: "#334155",
+          color: "#e2e8f0",
+          border: "1px solid #334155",
+          borderRadius: "0.375rem",
+          fontWeight: "600",
+          cursor: "pointer",
+        }}
+      >
+        Upgrade
+      </button>
+    </div>
+  </div>
+
+  <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", padding: "1.5rem", marginBottom: "2rem" }}>
+    <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1.5rem" }}>Current Usage</h3>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
+      <div>
+        <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginBottom: "0.5rem" }}>Sessions This Month</div>
+        <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>0 / 5,000</div>
+      </div>
+      <div>
+        <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginBottom: "0.5rem" }}>Team Members</div>
+        <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>1 / 5</div>
+      </div>
+      <div>
+        <div style={{ fontSize: "0.875rem", color: "#94a3b8", marginBottom: "0.5rem" }}>Data Retention</div>
+        <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>90 days</div>
+      </div>
+    </div>
+  </div>
+
+  <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", overflow: "hidden" }}>
+    <div style={{ padding: "1.5rem", borderBottom: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Billing History</h3>
+    </div>
+    <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8", fontSize: "0.875rem" }}>
+      No invoices yet. Your subscription will be billed monthly starting next billing period.
+    </div>
+  </div>
+</Dashboard>

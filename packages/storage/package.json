@@ -1,0 +1,25 @@
+{
+  "name": "@flamegraph/storage",
+  "version": "0.1.0",
+  "description": "Storage layer for flamegraph events (SQLite + PostgreSQL)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}

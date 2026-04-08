@@ -1,0 +1,21 @@
+{
+  "name": "@flamegraph/web",
+  "version": "0.1.0",
+  "description": "Astro dashboard for flamegraph visualization",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^4.5.0",
+    "@clerk/astro": "^1.0.0",
+    "d3": "^7.8.5"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.0",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}
