@@ -1,5 +1,13 @@
 ---
+export const prerender = false;
+
 import { SignUp } from "@clerk/astro/components";
+
+// If user is already signed in, redirect to app
+const auth = Astro.locals.auth?.();
+if (auth?.userId) {
+  return Astro.redirect("/app");
+}
 ---
 
 <!DOCTYPE html>
