@@ -1,6 +1,5 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "astro",
-  "rootDirectory": "packages/web"
+  "buildCommand": "npm --prefix packages/web run build",
+  "outputDirectory": "packages/web/dist",
+  "framework": "astro"
 }
