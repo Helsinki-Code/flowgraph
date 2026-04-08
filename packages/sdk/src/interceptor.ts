@@ -1,7 +1,10 @@
-import type { Agent, AgentEvent } from "@mariozechner/pi-agent-core";
-import type { AssistantMessage } from "@mariozechner/pi-ai";
 import { InstrumentOptions, EventCollector } from "./event-model.js";
 import { estimateTokens } from "./collector.js";
+
+// Type stubs for pi-agent (provided by host application)
+type Agent = any;
+type AgentEvent = any;
+type AssistantMessage = any;
 
 /**
  * instrumentAgent() — main entry point

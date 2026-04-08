@@ -43,3 +43,6 @@ pnpm-debug.log*
 # misc
 .cache
 .turbo
+
+.vercel
+.env*.local
