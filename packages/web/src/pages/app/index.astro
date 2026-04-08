@@ -4,8 +4,15 @@ export const prerender = false;
 import Dashboard from "../../layouts/Dashboard.astro";
 import { API_URL } from "../../lib/api";
 
-const { userId, orgId, getToken } = Astro.locals.auth();
-const token = await getToken();
+let userId, orgId, token;
+try {
+  const auth = Astro.locals.auth();
+  userId = auth.userId;
+  orgId = auth.orgId;
+  token = await auth.getToken();
+} catch (e) {
+  return Astro.redirect("/sign-in");
+}
 
 if (!userId) {
   return Astro.redirect("/sign-in");
