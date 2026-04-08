@@ -284,6 +284,8 @@ app.post("/v1/workspace/api-keys", async (request, reply) => {
   }
 
   try {
+    // Ensure workspace exists (created lazily on first API key generation)
+    await store.createWorkspace(workspaceId, "default");
     await store.createApiKey(workspaceId, keyHash);
     reply.send({ apiKey, createdAt: new Date().toISOString() });
   } catch (err) {
