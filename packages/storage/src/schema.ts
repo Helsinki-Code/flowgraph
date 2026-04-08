@@ -102,6 +102,19 @@ export const SCHEMA_INIT_SQL = [
 
   `CREATE INDEX IF NOT EXISTS idx_alert_fires_alert ON alert_fires(alert_id)`,
   `CREATE INDEX IF NOT EXISTS idx_alert_fires_session ON alert_fires(session_id)`,
+
+  // API Keys for SDK authentication
+  `CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_api_keys_workspace ON api_keys(workspace_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`,
 ];
 
 /**

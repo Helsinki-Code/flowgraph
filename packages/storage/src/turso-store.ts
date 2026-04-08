@@ -19,7 +19,7 @@ export class TursoStore {
   }
 
   /**
-   * Create a workspace
+   * Create a workspace (or ignore if already exists)
    */
   async createWorkspace(
     id: string,
@@ -27,7 +27,7 @@ export class TursoStore {
     plan: "free" | "pro" | "business" = "free",
   ): Promise<void> {
     await this.client.execute({
-      sql: `INSERT INTO workspaces (id, name, plan, created_at) VALUES (?, ?, ?, ?)`,
+      sql: `INSERT OR IGNORE INTO workspaces (id, name, plan, created_at) VALUES (?, ?, ?, ?)`,
       args: [id, name, plan, Date.now()],
     });
   }
@@ -338,6 +338,28 @@ export class TursoStore {
         details ? JSON.stringify(details) : null,
       ],
     });
+  }
+
+  /**
+   * Create and store API key hash
+   */
+  async createApiKey(workspaceId: string, keyHash: string): Promise<void> {
+    await this.client.execute({
+      sql: `INSERT INTO api_keys (id, workspace_id, key_hash, created_at) VALUES (?, ?, ?, ?)`,
+      args: [`key-${Date.now()}`, workspaceId, keyHash, Date.now()],
+    });
+  }
+
+  /**
+   * Validate API key by looking up key hash
+   */
+  async validateApiKey(keyHash: string): Promise<string | undefined> {
+    const result = await this.client.execute({
+      sql: `SELECT workspace_id FROM api_keys WHERE key_hash = ?`,
+      args: [keyHash],
+    });
+    if (result.rows.length === 0) return undefined;
+    return result.rows[0].workspace_id as string;
   }
 
   /**

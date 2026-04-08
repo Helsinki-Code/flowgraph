@@ -275,7 +275,21 @@ app.get("/v1/workspace", async (request, reply) => {
  */
 app.post("/v1/workspace/api-keys", async (request, reply) => {
   const apiKey = `sk_${crypto.randomBytes(32).toString("hex")}`;
-  reply.send({ apiKey });
+  const keyHash = crypto.createHash("sha256").update(apiKey).digest("hex");
+  const workspaceId = (request as any).workspaceId;
+
+  if (!workspaceId) {
+    reply.code(401).send({ error: "No workspace context" });
+    return;
+  }
+
+  try {
+    await store.createApiKey(workspaceId, keyHash);
+    reply.send({ apiKey, createdAt: new Date().toISOString() });
+  } catch (err) {
+    console.error("[api-keys] Error creating key:", err);
+    reply.code(500).send({ error: "Failed to create API key" });
+  }
 });
 
 /**
