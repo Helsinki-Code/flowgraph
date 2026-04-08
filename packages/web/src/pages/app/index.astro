@@ -1,0 +1,126 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../layouts/Dashboard.astro";
+import { API_URL } from "../../lib/api";
+
+const { userId, orgId, getToken } = Astro.locals.auth();
+const token = await getToken();
+
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const workspaceId = orgId || userId;
+let sessions = [];
+let error = null;
+
+try {
+  const response = await fetch(`${API_URL}/v1/sessions?workspace_id=${workspaceId}&limit=20`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+  const data = await response.json();
+  sessions = data.sessions || [];
+} catch (e: any) {
+  error = `Failed to load sessions: ${e.message}`;
+}
+
+const totalCost = sessions.reduce((sum: number, s: any) => sum + (s.total_cost_usd || 0), 0);
+const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
+---
+
+<Dashboard title="Sessions" description="View and analyze your AI agent session profiles">
+  {
+    error && (
+      <div
+        style={{
+          padding: "1rem",
+          borderRadius: "0.375rem",
+          background: "#7f1d1d",
+          color: "#fca5a5",
+          marginBottom: "1.5rem",
+        }}
+      >
+        {error}
+      </div>
+    )
+  }
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+      gap: "1rem",
+      marginBottom: "2rem",
+    }}
+  >
+    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        Total Sessions
+      </div>
+      <div style={{ fontSize: "2rem", fontWeight: "700" }}>{sessions.length}</div>
+    </div>
+    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        Total Cost
+      </div>
+      <div style={{ fontSize: "2rem", fontWeight: "700" }}>${totalCost.toFixed(4)}</div>
+    </div>
+    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+        Avg Cost/Session
+      </div>
+      <div style={{ fontSize: "2rem", fontWeight: "700" }}>${avgCost.toFixed(4)}</div>
+    </div>
+  </div>
+
+  <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", overflow: "hidden" }}>
+    <div style={{ padding: "1.5rem", borderBottom: "1px solid #334155" }}>
+      <h2 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Recent Sessions</h2>
+    </div>
+    {sessions.length === 0 ? (
+      <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+        No sessions yet. Run an agent with flamegraph instrumentation to see results.
+      </div>
+    ) : (
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", fontSize: "0.875rem" }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid #334155", background: "#0f172a" }}>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>ID</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Feature</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Cost</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Tokens</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((session: any) => (
+              <tr style={{ borderBottom: "1px solid #334155" }}>
+                <td style={{ padding: "1rem" }}>
+                  <a href={`/app/sessions/${session.id}`} style={{ color: "#6366f1", textDecoration: "none" }}>
+                    {session.id.slice(0, 12)}...
+                  </a>
+                </td>
+                <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.feature || "—"}</td>
+                <td style={{ padding: "1rem", fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
+                <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.total_tokens.toLocaleString()}</td>
+                <td style={{ padding: "1rem" }}>
+                  {session.loop_detected ? (
+                    <span style={{ background: "#7c2d12", color: "#fed7aa", padding: "0.25rem 0.75rem", borderRadius: "0.25rem", fontSize: "0.8rem" }}>
+                      LOOP
+                    </span>
+                  ) : (
+                    <span style={{ color: "#22c55e" }}>OK</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</Dashboard>

@@ -1,0 +1,81 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../layouts/Dashboard.astro";
+import { API_URL } from "../../lib/api";
+
+const { userId, orgId, getToken } = Astro.locals.auth();
+const token = await getToken();
+
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const workspaceId = orgId || userId;
+let workspace = { plan: "free", sessions_this_month: 0 };
+
+try {
+  const response = await fetch(`${API_URL}/v1/workspace?id=${workspaceId}`, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  const data = await response.json();
+  workspace = data.workspace || workspace;
+} catch (e) {
+  console.error("Failed to load workspace");
+}
+
+const planLimits = {
+  free: { sessions: -1, cost: "$0" },
+  pro: { sessions: 10000, cost: "$49" },
+  business: { sessions: -1, cost: "$299" },
+};
+
+const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimits.free;
+---
+
+<Dashboard title="Billing" description="Manage subscription and usage">
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
+    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Current Plan</h3>
+      <div style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "0.5rem", textTransform: "capitalize" }}>
+        {workspace.plan}
+      </div>
+      <div style={{ color: "#94a3b8", marginBottom: "2rem" }}>
+        {limits.cost}/month
+      </div>
+      {workspace.plan === "free" && (
+        <a href="/pricing" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "#6366f1", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600" }}>
+          Upgrade to Pro
+        </a>
+      )}
+    </div>
+
+    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Usage</h3>
+      <div style={{ marginBottom: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+          <span>Sessions this month</span>
+          <span style={{ fontWeight: "600" }}>
+            {workspace.sessions_this_month} {limits.sessions > 0 ? ` / ${limits.sessions}` : ""}
+          </span>
+        </div>
+        {limits.sessions > 0 && (
+          <div style={{ width: "100%", height: "8px", background: "#0f172a", borderRadius: "9999px", overflow: "hidden" }}>
+            <div
+              style={{
+                height: "100%",
+                background: "#6366f1",
+                width: `${Math.min((workspace.sessions_this_month / limits.sessions) * 100, 100)}%`,
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+    <h3 style={{ marginBottom: "1rem" }}>Invoice History</h3>
+    <p style={{ color: "#94a3b8" }}>No invoices yet.</p>
+  </div>
+</Dashboard>

@@ -1,0 +1,171 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../../layouts/Dashboard.astro";
+import FlameGraphViewer from "../../../components/FlameGraphViewer.astro";
+import { API_URL } from "../../../lib/api";
+
+const { userId, orgId, getToken } = Astro.locals.auth();
+const token = await getToken();
+
+if (!userId) {
+  return Astro.redirect("/sign-in");
+}
+
+const { id } = Astro.params;
+let session = null;
+let tree = null;
+let metrics = null;
+let error = null;
+
+try {
+  const [sessionRes, treeRes] = await Promise.all([
+    fetch(`${API_URL}/v1/sessions/${id}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    }),
+    fetch(`${API_URL}/v1/sessions/${id}/flamegraph`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    }),
+  ]);
+
+  if (sessionRes.ok) {
+    const sessionData = await sessionRes.json();
+    session = sessionData.session;
+  }
+
+  if (treeRes.ok) {
+    const treeData = await treeRes.json();
+    tree = treeData.tree;
+    metrics = treeData.metrics;
+  }
+} catch (e: any) {
+  error = `Failed to load session: ${e.message}`;
+}
+---
+
+<Dashboard title={`Session ${id?.slice(0, 12)}`} description="Flame graph analysis and cost breakdown">
+  {
+    error && (
+      <div
+        style={{
+          padding: "1rem",
+          borderRadius: "0.375rem",
+          background: "#7f1d1d",
+          color: "#fca5a5",
+          marginBottom: "1.5rem",
+        }}
+      >
+        {error}
+      </div>
+    )
+  }
+
+  {
+    session && (
+      <>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: "1rem",
+            marginBottom: "2rem",
+          }}
+        >
+          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+              Total Cost
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+              ${session.total_cost_usd.toFixed(4)}
+            </div>
+          </div>
+          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+              Total Tokens
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+              {session.total_tokens.toLocaleString()}
+            </div>
+          </div>
+          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+              Turns
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+              {session.turn_count}
+            </div>
+          </div>
+        </div>
+
+        {session.loop_detected && (
+          <div
+            style={{
+              padding: "1rem",
+              borderRadius: "0.375rem",
+              background: "#7c2d12",
+              color: "#fed7aa",
+              marginBottom: "1.5rem",
+              border: "1px solid #f97316",
+            }}
+          >
+            <strong>⚠ Warning:</strong> Possible infinite loop detected. Check the flame graph for repeated tool calls.
+          </div>
+        )}
+
+        {tree && (
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
+              Flame Graph
+            </div>
+            <FlameGraphViewer tree={tree} sessionId={id} />
+          </div>
+        )}
+
+        <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", padding: "1.5rem" }}>
+          <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
+            Session Details
+          </h3>
+          <table style={{ width: "100%", fontSize: "0.875rem" }}>
+            <tr style={{ borderBottom: "1px solid #334155" }}>
+              <td style={{ padding: "0.5rem", color: "#94a3b8" }}>ID</td>
+              <td style={{ padding: "0.5rem", fontFamily: "monospace" }}>
+                {session.id}
+              </td>
+            </tr>
+            <tr style={{ borderBottom: "1px solid #334155" }}>
+              <td style={{ padding: "0.5rem", color: "#94a3b8" }}>Started</td>
+              <td style={{ padding: "0.5rem" }}>
+                {new Date(session.started_at).toISOString()}
+              </td>
+            </tr>
+            {session.feature && (
+              <tr style={{ borderBottom: "1px solid #334155" }}>
+                <td style={{ padding: "0.5rem", color: "#94a3b8" }}>Feature</td>
+                <td style={{ padding: "0.5rem" }}>
+                  {session.feature}
+                </td>
+              </tr>
+            )}
+          </table>
+        </div>
+
+        <div style={{ marginTop: "1.5rem" }}>
+          <a
+            href="/app"
+            style={{
+              display: "inline-block",
+              padding: "0.75rem 1.5rem",
+              background: "#334155",
+              color: "#e2e8f0",
+              borderRadius: "0.375rem",
+              textDecoration: "none",
+              transition: "background 0.2s",
+            }}
+          >
+            ← Back to Sessions
+          </a>
+        </div>
+      </>
+    )
+  }
+</Dashboard>
