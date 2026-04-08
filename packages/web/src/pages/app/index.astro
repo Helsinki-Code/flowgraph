@@ -6,15 +6,21 @@ import { API_URL } from "../../lib/api";
 
 let userId, orgId, token;
 try {
-  const auth = Astro.locals.auth();
-  userId = auth.userId;
-  orgId = auth.orgId;
-  token = await auth.getToken();
-} catch (e) {
-  return Astro.redirect("/sign-in");
-}
+  // Ensure auth exists before calling it
+  if (!Astro.locals?.auth) {
+    return Astro.redirect("/sign-in");
+  }
 
-if (!userId) {
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  orgId = auth?.orgId;
+  token = auth?.getToken ? await auth.getToken() : null;
+
+  if (!userId) {
+    return Astro.redirect("/sign-in");
+  }
+} catch (e) {
+  console.error("Auth error in /app:", e);
   return Astro.redirect("/sign-in");
 }
 
@@ -22,16 +28,24 @@ const workspaceId = orgId || userId;
 let sessions = [];
 let error = null;
 
-try {
-  const response = await fetch(`${API_URL}/v1/sessions?workspace_id=${workspaceId}&limit=20`, {
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-  const data = await response.json();
-  sessions = data.sessions || [];
-} catch (e: any) {
-  error = `Failed to load sessions: ${e.message}`;
+if (workspaceId && token) {
+  try {
+    const response = await fetch(`${API_URL}/v1/sessions?workspace_id=${workspaceId}&limit=20`, {
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      error = `API Error: ${response.status} ${response.statusText}`;
+    } else {
+      const data = await response.json();
+      sessions = data.sessions || [];
+    }
+  } catch (e: any) {
+    error = `Failed to load sessions: ${e.message}`;
+  }
+} else {
+  error = "Missing authentication data";
 }
 
 const totalCost = sessions.reduce((sum: number, s: any) => sum + (s.total_cost_usd || 0), 0);
