@@ -1,5 +1,12 @@
 ---
+export const prerender = false;
+
 import { SignIn } from "@clerk/astro/components";
+
+const auth = Astro.locals.auth();
+if (auth.userId) {
+  return Astro.redirect("/app");
+}
 ---
 
 <!DOCTYPE html>
