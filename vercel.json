@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm install && npm run build:web",
-  "outputDirectory": "packages/web/dist",
-  "framework": "astro"
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "astro",
+  "rootDirectory": "packages/web"
 }
