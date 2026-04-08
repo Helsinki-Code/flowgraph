@@ -1,0 +1,65 @@
+---
+import Public from "../layouts/Public.astro";
+---
+
+<Public title="Pricing" description="Simple, transparent pricing for teams of all sizes.">
+  <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "3rem 2rem" }}>
+    <h1 style={{ fontSize: "2.5rem", fontWeight: "800", textAlign: "center", marginBottom: "1rem" }}>
+      Transparent Pricing
+    </h1>
+    <p style={{ textAlign: "center", color: "#a1a1aa", marginBottom: "3rem", maxWidth: "600px", margin: "0 auto 3rem" }}>
+      All plans include real-time flame graphs and cost attribution. Scale from free to enterprise.
+    </p>
+
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "2rem" }}>
+      <div style={{ background: "#1e293b", padding: "2.5rem", borderRadius: "0.75rem", border: "1px solid #334155" }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Free</h2>
+        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>Perfect to get started</p>
+        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$0<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
+        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Unlimited sessions</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Real-time flame graphs</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Basic cost breakdown</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Loop detection</li>
+          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 7-day retention</li>
+        </ul>
+        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#334155", color: "#fafafa", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Start Free</a>
+      </div>
+
+      <div style={{ background: "#1a1a2e", padding: "2.5rem", borderRadius: "0.75rem", border: "2px solid #6366f1", position: "relative" }}>
+        <div style={{ position: "absolute", top: "-15px", left: "50%", transform: "translateX(-50%)", background: "#6366f1", color: "white", padding: "0.4rem 1rem", borderRadius: "9999px", fontSize: "0.8rem", fontWeight: "700", textTransform: "uppercase" }}>Most Popular</div>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Pro</h2>
+        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>For growing teams</p>
+        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$49<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
+        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ 10k sessions/month</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Advanced cost breakdown</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Custom alerts (email)</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Loop & anomaly detection</li>
+          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 30-day retention</li>
+        </ul>
+        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#6366f1", color: "white", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Start Free Trial</a>
+      </div>
+
+      <div style={{ background: "#1e293b", padding: "2.5rem", borderRadius: "0.75rem", border: "1px solid #334155" }}>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Business</h2>
+        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>For enterprises</p>
+        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$299<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
+        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Unlimited sessions</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Team workspaces</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Webhook alerts</li>
+          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Priority support</li>
+          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 90-day retention</li>
+        </ul>
+        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#334155", color: "#fafafa", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Contact Sales</a>
+      </div>
+    </div>
+
+    <div style={{ marginTop: "4rem", padding: "2rem", background: "#1e293b", borderRadius: "0.75rem", border: "1px solid #334155", textAlign: "center" }}>
+      <h3 style={{ marginBottom: "1rem" }}>Questions? We're here to help</h3>
+      <p style={{ color: "#a1a1aa", marginBottom: "1rem" }}>Contact us for custom pricing, enterprise features, or any other questions.</p>
+      <a href="mailto:sales@flamegraph.dev" style={{ color: "#6366f1", textDecoration: "none", fontWeight: "600" }}>sales@flamegraph.dev</a>
+    </div>
+  </div>
+</Public>

@@ -1,0 +1,131 @@
+---
+import Public from "../layouts/Public.astro";
+---
+
+<Public title="Documentation" description="Get started with the Flame Graph SDK in minutes.">
+  <div style={{ maxWidth: "800px", margin: "0 auto", padding: "3rem 2rem" }}>
+    <h1 style={{ fontSize: "2.5rem", fontWeight: "800", marginBottom: "1rem" }}>Documentation</h1>
+    <p style={{ color: "#a1a1aa", marginBottom: "3rem", fontSize: "1.1rem" }}>Learn how to instrument your AI agent and start tracking token consumption.</p>
+
+    <!-- Installation -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>Installation</h2>
+      <p style={{ color: "#a1a1aa", marginBottom: "1.5rem" }}>Install the Flame Graph SDK from npm:</p>
+      <pre style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", overflow: "auto" }}>
+        <code style={{ color: "#22c55e" }}>npm install @flamegraph/sdk</code>
+      </pre>
+    </section>
+
+    <!-- Quick Start -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>Quick Start</h2>
+      <p style={{ color: "#a1a1aa", marginBottom: "1.5rem" }}>Wrap your agent with instrumentation in 3 lines:</p>
+      <pre style={{ background: "#0f172a", padding: "1.5rem", borderRadius: "0.375rem", overflow: "auto" }}>
+        <code style={{ color: "#e2e8f0" }}>{`import { instrumentAgent } from "@flamegraph/sdk";
+import { LocalCollector } from "@flamegraph/sdk";
+
+// Create collector that posts to Flame Graph server
+const collector = new LocalCollector({
+  serverUrl: "https://flowgraph-n8xj.onrender.com",
+  apiKey: "sk_...", // Get from dashboard
+});
+
+// Wrap your agent
+instrumentAgent(agent, { collector });
+
+// Events automatically flow to the dashboard
+await agent.run("What's the weather?");`}</code>
+      </pre>
+    </section>
+
+    <!-- Configuration -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>Configuration</h2>
+      <p style={{ color: "#a1a1aa", marginBottom: "1.5rem" }}>LocalCollector accepts these options:</p>
+      <ul style={{ listStyle: "none", color: "#a1a1aa" }}>
+        <li style={{ paddingY: "0.5rem" }}><span style={{ color: "#fafafa", fontWeight: "600" }}>serverUrl</span> (required) - URL to your Flame Graph server</li>
+        <li style={{ paddingY: "0.5rem" }}><span style={{ color: "#fafafa", fontWeight: "600" }}>apiKey</span> (optional) - API key from dashboard (for authentication)</li>
+        <li style={{ paddingY: "0.5rem" }}><span style={{ color: "#fafafa", fontWeight: "600" }}>flushInterval</span> - How often to batch-send events (default: 5000ms)</li>
+        <li style={{ paddingY: "0.5rem" }}><span style={{ color: "#fafafa", fontWeight: "600" }}>maxBatchSize</span> - Events per batch (default: 100)</li>
+      </ul>
+    </section>
+
+    <!-- API Reference -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>API Reference</h2>
+
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginTop: "1.5rem", marginBottom: "0.75rem" }}>
+        instrumentAgent(agent, options)
+      </h3>
+      <p style={{ color: "#a1a1aa", marginBottom: "1rem" }}>
+        Wraps an agent to track all LLM calls, tool executions, and context builds.
+      </p>
+      <pre style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", overflow: "auto" }}>
+        <code style={{ color: "#e2e8f0" }}>{`instrumentAgent(agent, {
+  collector: LocalCollector,
+  workspaceId?: string,
+  engineerId?: string,
+  feature?: string,
+});`}</code>
+      </pre>
+
+      <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginTop: "1.5rem", marginBottom: "0.75rem" }}>
+        collector.flush()
+      </h3>
+      <p style={{ color: "#a1a1aa", marginBottom: "1rem" }}>
+        Manually flush buffered events to the server. Called automatically at intervals.
+      </p>
+    </section>
+
+    <!-- Getting Your API Key -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>Getting Your API Key</h2>
+      <ol style={{ listStyle: "decimal", paddingLeft: "2rem", color: "#a1a1aa" }}>
+        <li style={{ paddingY: "0.5rem" }}>Sign in to your Flame Graph dashboard</li>
+        <li style={{ paddingY: "0.5rem" }}>Go to Settings → API Keys</li>
+        <li style={{ paddingY: "0.5rem" }}>Click "Generate New Key" and copy it</li>
+        <li style={{ paddingY: "0.5rem" }}>Pass it to LocalCollector as <code style={{ background: "#1e293b", padding: "0.25rem 0.5rem", borderRadius: "0.25rem", color: "#22c55e" }}>apiKey</code></li>
+      </ol>
+    </section>
+
+    <!-- Examples -->
+    <section style={{ marginBottom: "3rem", paddingBottom: "2rem", borderBottom: "1px solid #27272a" }}>
+      <h2 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "1rem" }}>Examples</h2>
+
+      <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginTop: "1.5rem", marginBottom: "0.75rem" }}>
+        With a pi-agent core agent
+      </h3>
+      <pre style={{ background: "#0f172a", padding: "1rem", borderRadius: "0.375rem", overflow: "auto" }}>
+        <code style={{ color: "#e2e8f0" }}>{`import { createAgent } from "pi-agent-core";
+import { instrumentAgent, LocalCollector } from "@flamegraph/sdk";
+
+const agent = createAgent({...});
+
+const collector = new LocalCollector({
+  serverUrl: "https://api.flamegraph.dev",
+  apiKey: process.env.FLAMEGRAPH_API_KEY,
+});
+
+instrumentAgent(agent, {
+  collector,
+  feature: "market-research",
+  engineerId: "john@company.com",
+});
+
+await agent.run("Research competitors...");`}</code>
+      </pre>
+    </section>
+
+    <!-- Support -->
+    <section style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.75rem", border: "1px solid #334155" }}>
+      <h3 style={{ marginBottom: "1rem" }}>Need Help?</h3>
+      <p style={{ color: "#a1a1aa", marginBottom: "1rem" }}>
+        Check our GitHub discussions, open an issue, or email support@flamegraph.dev
+      </p>
+      <div style={{ display: "flex", gap: "1rem" }}>
+        <a href="https://github.com/Helsinki-Code/flowgraph/discussions" style={{ color: "#6366f1", textDecoration: "none", fontWeight: "600" }}>GitHub</a>
+        <a href="mailto:support@flamegraph.dev" style={{ color: "#6366f1", textDecoration: "none", fontWeight: "600" }}>Email</a>
+      </div>
+    </section>
+  </div>
+</Public>
