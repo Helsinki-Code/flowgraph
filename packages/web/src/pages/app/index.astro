@@ -163,7 +163,7 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
             <div>
               <div style={{ fontSize: "0.875rem", color: "#f97316", fontWeight: "600", marginBottom: "0.5rem" }}>2 Instrument your agent</div>
               <code style={{ background: "#1a2836", padding: "0.75rem", borderRadius: "0.25rem", display: "block", fontSize: "0.85rem", color: "#e2e8f0", fontFamily: "JetBrains Mono, monospace", overflow: "auto" }}>
-{`import { LocalCollector } from "@flamegraph/sdk";
+{`import { LocalCollector } from "flamegraph-sdk";
 instrumentAgent(agent, {
   collector: new LocalCollector({
     serverUrl: "https://api.example.com",

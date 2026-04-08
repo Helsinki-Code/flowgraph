@@ -137,7 +137,7 @@ let error = null;
           Copy
         </button>
         <pre style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.875rem", color: "#e2e8f0", margin: 0, overflow: "auto", whiteSpace: "pre-wrap", wordWrap: "break-word", paddingRight: "100px" }}>
-{`import { LocalCollector } from "@flamegraph/sdk";
+{`import { LocalCollector } from "flamegraph-sdk";
 
 instrumentAgent(agent, {
   collector: new LocalCollector({
@@ -218,7 +218,7 @@ instrumentAgent(agent, {
     });
 
     copyCodeBtn.addEventListener("click", async () => {
-      const codeText = `import { LocalCollector } from "@flamegraph/sdk";\n\ninstrumentAgent(agent, {\n  collector: new LocalCollector({\n    serverUrl: "${API_URL}",\n    apiKey: "sk_your_key_here" // from Settings\n  })\n});`;
+      const codeText = `import { LocalCollector } from "flamegraph-sdk";\n\ninstrumentAgent(agent, {\n  collector: new LocalCollector({\n    serverUrl: "${API_URL}",\n    apiKey: "sk_your_key_here" // from Settings\n  })\n});`;
 
       try {
         await navigator.clipboard.writeText(codeText);

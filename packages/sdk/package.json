@@ -1,5 +1,5 @@
 {
-  "name": "@flamegraph/sdk",
+  "name": "flamegraph-sdk",
   "version": "0.1.0",
   "description": "Drop-in instrumentation wrapper for pi-agent-core",
   "type": "module",
