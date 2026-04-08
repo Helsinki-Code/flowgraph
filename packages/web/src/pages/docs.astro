@@ -57,6 +57,10 @@ import Public from "../layouts/Public.astro";
       border: 1px solid var(--border);
     }
 
+    .docs-code {
+      position: relative;
+    }
+
     .docs-code code {
       color: #e2e8f0;
       font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
@@ -66,6 +70,35 @@ import Public from "../layouts/Public.astro";
 
     .docs-code.shell code {
       color: var(--success);
+    }
+
+    .copy-code-btn {
+      position: absolute;
+      top: var(--spacing-md);
+      right: var(--spacing-md);
+      padding: var(--spacing-xs) var(--spacing-md);
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      opacity: 0;
+    }
+
+    .docs-code:hover .copy-code-btn {
+      opacity: 1;
+    }
+
+    .copy-code-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+    }
+
+    .copy-code-btn.copied {
+      background: var(--success);
     }
 
     .docs-list {
@@ -250,4 +283,29 @@ await agent.run("Research competitors...");`}</code>
       </div>
     </section>
   </div>
+
+  <script>
+    // Add copy buttons to all code blocks
+    document.querySelectorAll('.docs-code').forEach((block, index) => {
+      const button = document.createElement('button');
+      button.className = 'copy-code-btn';
+      button.textContent = 'Copy';
+      button.setAttribute('data-index', index);
+
+      button.addEventListener('click', function() {
+        const code = block.querySelector('code').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+          button.textContent = 'Copied!';
+          button.classList.add('copied');
+          setTimeout(() => {
+            button.textContent = 'Copy';
+            button.classList.remove('copied');
+          }, 2000);
+        });
+      });
+
+      block.style.position = 'relative';
+      block.appendChild(button);
+    });
+  </script>
 </Public>
