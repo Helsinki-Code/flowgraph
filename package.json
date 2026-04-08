@@ -15,6 +15,8 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces",
+    "build:server": "npm --prefix packages/storage run build && npm --prefix packages/sdk run build && npm --prefix packages/server run build",
+    "build:web": "npm --prefix packages/web run build",
     "dev": "npm run dev --workspace=packages/server",
     "test": "npm run test --workspaces"
   },
