@@ -20,7 +20,13 @@
     "ulid": "^2.3.0"
   },
   "devDependencies": {
+    "@mariozechner/pi-agent-core": "^0.1.0",
+    "@mariozechner/pi-ai": "^0.1.0",
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-agent-core": "^0.1.0",
+    "@mariozechner/pi-ai": "^0.1.0"
   }
 }
