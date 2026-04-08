@@ -3,135 +3,312 @@ import Public from "../layouts/Public.astro";
 ---
 
 <Public title="Home" description="See exactly where your AI agent burns tokens. Real-time flame graphs for AI cost optimization.">
-  <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 2rem" }}>
+  <style>
+    .hero {
+      padding: var(--spacing-3xl) 0;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 10vw, 3.5rem);
+      font-weight: 800;
+      margin-bottom: var(--spacing-lg);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+
+    .hero p {
+      font-size: var(--text-lg);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .section {
+      padding: var(--spacing-3xl) 0;
+      margin-top: var(--spacing-3xl);
+      margin-bottom: var(--spacing-3xl);
+      border-top: 1px solid var(--border);
+    }
+
+    .section h2 {
+      text-align: center;
+      margin-bottom: var(--spacing-3xl);
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .problem-card {
+      background: var(--bg-card);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      transition: all var(--transition-base);
+    }
+
+    .problem-card:hover {
+      border-color: var(--accent);
+      background: var(--bg-surface);
+      transform: translateY(-4px);
+    }
+
+    .problem-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .problem-card h3 {
+      margin-bottom: var(--spacing-md);
+      font-size: var(--text-xl);
+      font-weight: 600;
+    }
+
+    .problem-card p {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+
+    .step-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .step-card h3 {
+      margin-bottom: var(--spacing-md);
+      font-size: var(--text-base);
+      font-weight: 600;
+    }
+
+    .step-card code {
+      display: block;
+      background: var(--bg-surface);
+      padding: var(--spacing-md);
+      border-radius: var(--radius-sm);
+      font-size: var(--text-sm);
+      color: var(--success);
+      overflow-x: auto;
+      margin-bottom: var(--spacing-md);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-lg);
+    }
+
+    .feature-item {
+      display: flex;
+      gap: var(--spacing-lg);
+    }
+
+    .feature-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .feature-content h3 {
+      margin-bottom: var(--spacing-sm);
+      font-weight: 600;
+    }
+
+    .feature-content p {
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--spacing-lg);
+    }
+
+    .pricing-card {
+      background: var(--bg-card);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      position: relative;
+      transition: all var(--transition-base);
+    }
+
+    .pricing-card.featured {
+      background: var(--bg-surface);
+      border: 2px solid var(--accent);
+    }
+
+    .pricing-card.featured:hover {
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-md);
+      border-radius: 9999px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .pricing-card h3 {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .pricing-price {
+      font-size: var(--text-lg);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pricing-price strong {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .pricing-list {
+      list-style: none;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pricing-list li {
+      padding: var(--spacing-sm) 0;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    .pricing-cta {
+      display: block;
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      text-align: center;
+      font-weight: 600;
+      font-size: var(--text-sm);
+      text-decoration: none;
+      transition: all var(--transition-base);
+    }
+
+    .pricing-cta-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .pricing-cta-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .pricing-cta-secondary {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .pricing-cta-secondary:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .cta-section {
+      padding: var(--spacing-3xl) 0;
+      margin-top: var(--spacing-3xl);
+      margin-bottom: var(--spacing-3xl);
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .cta-section h2 {
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .cta-section p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+      font-size: var(--text-lg);
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 1.875rem;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div class="container">
     <!-- Hero -->
-    <section style={{ paddingTop: "6rem", paddingBottom: "6rem", textAlign: "center" }}>
-      <h1
-        style={{
-          fontSize: "3.5rem",
-          fontWeight: "800",
-          marginBottom: "1.5rem",
-          letterSpacing: "-0.02em",
-          lineHeight: "1.1",
-        }}
-      >
-        See exactly where your AI agent burns tokens
-      </h1>
-      <p
-        style={{
-          fontSize: "1.25rem",
-          color: "#a1a1aa",
-          marginBottom: "2rem",
-          maxWidth: "600px",
-          margin: "0 auto 2rem",
-        }}
-      >
+    <section class="hero">
+      <h1>See exactly where your AI agent burns tokens</h1>
+      <p>
         Real-time flame graphs identify token waste, runaway loops, and cost overruns in LLM-powered
         systems. Optimize with precision.
       </p>
-      <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-        <a
-          href="/sign-up"
-          style={{
-            padding: "1rem 2rem",
-            background: "#6366f1",
-            color: "white",
-            textDecoration: "none",
-            borderRadius: "0.375rem",
-            fontWeight: "600",
-            transition: "background 0.2s",
-          }}
-          onmouseover="this.style.background='#4f46e5'"
-          onmouseout="this.style.background='#6366f1'"
-        >
-          Get Started Free
-        </a>
-        <a
-          href="/app"
-          style={{
-            padding: "1rem 2rem",
-            background: "transparent",
-            color: "#a1a1aa",
-            textDecoration: "none",
-            borderRadius: "0.375rem",
-            fontWeight: "600",
-            border: "1px solid #3f3f46",
-            transition: "all 0.2s",
-          }}
-          onmouseover="this.style.background='#1e293b'; this.style.color='#fafafa'"
-          onmouseout="this.style.background='transparent'; this.style.color='#a1a1aa'"
-        >
-          View Live Demo
-        </a>
+      <div class="hero-ctas">
+        <a href="/sign-up" class="btn btn-primary">Get Started Free</a>
+        <a href="/app" class="btn btn-ghost">View Live Demo</a>
       </div>
     </section>
 
     <!-- Problem -->
-    <section style={{ paddingTop: "4rem", paddingBottom: "4rem", marginTop: "4rem", marginBottom: "4rem", borderTop: "1px solid #27272a" }}>
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: "700",
-          textAlign: "center",
-          marginBottom: "3rem",
-        }}
-      >
-        The Problem with LLM Costs
-      </h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "2rem",
-        }}
-      >
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #334155",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📊</div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem", fontWeight: "600" }}>
-            Wasted Tokens
-          </h3>
-          <p style={{ color: "#a1a1aa" }}>
+    <section class="section">
+      <h2>The Problem with LLM Costs</h2>
+      <div class="problem-grid">
+        <div class="problem-card">
+          <div class="icon">📊</div>
+          <h3>Wasted Tokens</h3>
+          <p>
             70% of token spend is wasted on redundant calls, excessive retries, and unnecessary
             context.
           </p>
         </div>
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #334155",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🔍</div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem", fontWeight: "600" }}>
-            No Visibility
-          </h3>
-          <p style={{ color: "#a1a1aa" }}>
+        <div class="problem-card">
+          <div class="icon">🔍</div>
+          <h3>No Visibility</h3>
+          <p>
             Standard logging gives you timestamps. You need a flame graph to see where tokens
             actually burn.
           </p>
         </div>
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #334155",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>💰</div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.25rem", fontWeight: "600" }}>
-            Runaway Costs
-          </h3>
-          <p style={{ color: "#a1a1aa" }}>
+        <div class="problem-card">
+          <div class="icon">💰</div>
+          <h3>Runaway Costs</h3>
+          <p>
             Infinite loops and cascading tool calls spiral into hundreds of dollars before anyone
             notices.
           </p>
@@ -140,89 +317,23 @@ import Public from "../layouts/Public.astro";
     </section>
 
     <!-- How It Works -->
-    <section style={{ paddingTop: "4rem", paddingBottom: "4rem", marginTop: "4rem", marginBottom: "4rem", borderTop: "1px solid #27272a" }}>
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: "700",
-          textAlign: "center",
-          marginBottom: "3rem",
-        }}
-      >
-        How It Works
-      </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "2rem" }}>
-        <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-          <div
-            style={{
-              fontSize: "2rem",
-              fontWeight: "700",
-              color: "#6366f1",
-              marginBottom: "1rem",
-            }}
-          >
-            1
-          </div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.1rem", fontWeight: "600" }}>
-            Install SDK
-          </h3>
-          <code
-            style={{
-              display: "block",
-              background: "#0f172a",
-              padding: "1rem",
-              borderRadius: "0.375rem",
-              fontSize: "0.85rem",
-              color: "#22c55e",
-              overflow: "auto",
-            }}
-          >
-            npm install @flamegraph/sdk
-          </code>
+    <section class="section">
+      <h2>How It Works</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Install SDK</h3>
+          <code>npm install @flamegraph/sdk</code>
         </div>
-        <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-          <div
-            style={{
-              fontSize: "2rem",
-              fontWeight: "700",
-              color: "#6366f1",
-              marginBottom: "1rem",
-            }}
-          >
-            2
-          </div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.1rem", fontWeight: "600" }}>
-            Instrument Agent
-          </h3>
-          <code
-            style={{
-              display: "block",
-              background: "#0f172a",
-              padding: "1rem",
-              borderRadius: "0.375rem",
-              fontSize: "0.85rem",
-              color: "#22c55e",
-              overflow: "auto",
-            }}
-          >
-            {"instrumentAgent(agent, { collector })"}
-          </code>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>Instrument Agent</h3>
+          <code>instrumentAgent(agent, { collector })</code>
         </div>
-        <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-          <div
-            style={{
-              fontSize: "2rem",
-              fontWeight: "700",
-              color: "#6366f1",
-              marginBottom: "1rem",
-            }}
-          >
-            3
-          </div>
-          <h3 style={{ marginBottom: "1rem", fontSize: "1.1rem", fontWeight: "600" }}>
-            View Flame Graphs
-          </h3>
-          <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>View Flame Graphs</h3>
+          <p style="color: var(--text-secondary); font-size: var(--text-sm);">
             Real-time visualization of token burn and cost attribution
           </p>
         </div>
@@ -230,51 +341,42 @@ import Public from "../layouts/Public.astro";
     </section>
 
     <!-- Features -->
-    <section style={{ paddingTop: "4rem", paddingBottom: "4rem", marginTop: "4rem", marginBottom: "4rem", borderTop: "1px solid #27272a" }}>
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: "700",
-          textAlign: "center",
-          marginBottom: "3rem",
-        }}
-      >
-        Powerful Features
-      </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
-          <div style={{ fontSize: "1.5rem" }}>🔥</div>
-          <div>
-            <h3 style={{ marginBottom: "0.5rem", fontWeight: "600" }}>Flame Graph Visualization</h3>
-            <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>
+    <section class="section">
+      <h2>Powerful Features</h2>
+      <div class="features-grid">
+        <div class="feature-item">
+          <div class="feature-icon">🔥</div>
+          <div class="feature-content">
+            <h3>Flame Graph Visualization</h3>
+            <p>
               Time-proportional icicle charts showing exactly where tokens burn across your
               session.
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
-          <div style={{ fontSize: "1.5rem" }}>💳</div>
-          <div>
-            <h3 style={{ marginBottom: "0.5rem", fontWeight: "600" }}>Cost Attribution</h3>
-            <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>
+        <div class="feature-item">
+          <div class="feature-icon">💳</div>
+          <div class="feature-content">
+            <h3>Cost Attribution</h3>
+            <p>
               Drill down by model, tool, engineer, or feature to find cost hotspots.
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
-          <div style={{ fontSize: "1.5rem" }}>🔁</div>
-          <div>
-            <h3 style={{ marginBottom: "0.5rem", fontWeight: "600" }}>Loop Detection</h3>
-            <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>
+        <div class="feature-item">
+          <div class="feature-icon">🔁</div>
+          <div class="feature-content">
+            <h3>Loop Detection</h3>
+            <p>
               Automatic detection of infinite loops and cascading tool calls.
             </p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "1.5rem" }}>
-          <div style={{ fontSize: "1.5rem" }}>🔔</div>
-          <div>
-            <h3 style={{ marginBottom: "0.5rem", fontWeight: "600" }}>Smart Alerts</h3>
-            <p style={{ color: "#a1a1aa", fontSize: "0.9rem" }}>
+        <div class="feature-item">
+          <div class="feature-icon">🔔</div>
+          <div class="feature-content">
+            <h3>Smart Alerts</h3>
+            <p>
               Real-time alerts on cost spikes, loops, and unusual patterns.
             </p>
           </div>
@@ -283,209 +385,52 @@ import Public from "../layouts/Public.astro";
     </section>
 
     <!-- Pricing Preview -->
-    <section style={{ paddingTop: "4rem", paddingBottom: "4rem", marginTop: "4rem", marginBottom: "4rem", borderTop: "1px solid #27272a" }}>
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: "700",
-          textAlign: "center",
-          marginBottom: "3rem",
-        }}
-      >
-        Simple Pricing
-      </h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #334155",
-          }}
-        >
-          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>Free</h3>
-          <p style={{ color: "#a1a1aa", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
-            Get started with unlimited sessions
-          </p>
-          <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Unlimited sessions
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Real-time flame graphs
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Basic alerts
-            </li>
+    <section class="section">
+      <h2>Simple Pricing</h2>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3>Free</h3>
+          <div class="pricing-price">Get started with unlimited sessions</div>
+          <ul class="pricing-list">
+            <li>✓ Unlimited sessions</li>
+            <li>✓ Real-time flame graphs</li>
+            <li>✓ Basic alerts</li>
           </ul>
-          <a
-            href="/sign-up"
-            style={{
-              display: "block",
-              padding: "0.75rem",
-              background: "#334155",
-              color: "#fafafa",
-              textDecoration: "none",
-              borderRadius: "0.375rem",
-              textAlign: "center",
-              fontWeight: "600",
-              fontSize: "0.9rem",
-            }}
-          >
-            Get Started
-          </a>
+          <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Get Started</a>
         </div>
 
-        <div
-          style={{
-            background: "#1a1a2e",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "2px solid #6366f1",
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: "-12px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "#6366f1",
-              color: "white",
-              padding: "0.25rem 0.75rem",
-              borderRadius: "9999px",
-              fontSize: "0.75rem",
-              fontWeight: "600",
-              textTransform: "uppercase",
-            }}
-          >
-            Popular
-          </div>
-          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Pro
-          </h3>
-          <p style={{ color: "#a1a1aa", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
-            <span style={{ fontSize: "1.5rem", fontWeight: "700", color: "#fafafa" }}>$49</span>/mo
-          </p>
-          <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ 10k sessions/month
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Advanced cost attribution
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Custom alerts & webhooks
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ 30-day retention
-            </li>
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Popular</div>
+          <h3>Pro</h3>
+          <div class="pricing-price"><strong>$49</strong>/mo</div>
+          <ul class="pricing-list">
+            <li>✓ 10k sessions/month</li>
+            <li>✓ Advanced cost attribution</li>
+            <li>✓ Custom alerts & webhooks</li>
+            <li>✓ 30-day retention</li>
           </ul>
-          <a
-            href="/sign-up"
-            style={{
-              display: "block",
-              padding: "0.75rem",
-              background: "#6366f1",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: "0.375rem",
-              textAlign: "center",
-              fontWeight: "600",
-              fontSize: "0.9rem",
-            }}
-          >
-            Start Free Trial
-          </a>
+          <a href="/sign-up" class="pricing-cta pricing-cta-primary">Start Free Trial</a>
         </div>
 
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "2rem",
-            borderRadius: "0.5rem",
-            border: "1px solid #334155",
-          }}
-        >
-          <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-            Business
-          </h3>
-          <p style={{ color: "#a1a1aa", marginBottom: "1.5rem", fontSize: "0.9rem" }}>
-            <span style={{ fontSize: "1.5rem", fontWeight: "700", color: "#fafafa" }}>$299</span>/mo
-          </p>
-          <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Unlimited sessions
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Team collaboration
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ Priority support
-            </li>
-            <li style={{ paddingTop: "0.5rem", paddingBottom: "0.5rem", color: "#a1a1aa", fontSize: "0.9rem" }}>
-              ✓ 90-day retention
-            </li>
+        <div class="pricing-card">
+          <h3>Business</h3>
+          <div class="pricing-price"><strong>$299</strong>/mo</div>
+          <ul class="pricing-list">
+            <li>✓ Unlimited sessions</li>
+            <li>✓ Team collaboration</li>
+            <li>✓ Priority support</li>
+            <li>✓ 90-day retention</li>
           </ul>
-          <a
-            href="/sign-up"
-            style={{
-              display: "block",
-              padding: "0.75rem",
-              background: "#334155",
-              color: "#fafafa",
-              textDecoration: "none",
-              borderRadius: "0.375rem",
-              textAlign: "center",
-              fontWeight: "600",
-              fontSize: "0.9rem",
-            }}
-          >
-            Contact Sales
-          </a>
+          <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Contact Sales</a>
         </div>
       </div>
     </section>
 
-    <!-- CTA -->
-    <section
-      style={{
-        paddingTop: "4rem",
-        paddingBottom: "4rem",
-        marginTop: "4rem",
-        marginBottom: "4rem",
-        textAlign: "center",
-        borderTop: "1px solid #27272a",
-      }}
-    >
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: "700",
-          marginBottom: "1.5rem",
-        }}
-      >
-        Ready to optimize your AI spend?
-      </h2>
-      <p style={{ color: "#a1a1aa", marginBottom: "2rem", fontSize: "1.1rem" }}>
-        Start for free. No credit card required.
-      </p>
-      <a
-        href="/sign-up"
-        style={{
-          display: "inline-block",
-          padding: "1rem 2rem",
-          background: "#6366f1",
-          color: "white",
-          textDecoration: "none",
-          borderRadius: "0.375rem",
-          fontWeight: "600",
-          fontSize: "1rem",
-        }}
-      >
-        Get Started Now
-      </a>
+    <!-- Final CTA -->
+    <section class="cta-section">
+      <h2>Ready to optimize your AI spend?</h2>
+      <p>Start for free. No credit card required.</p>
+      <a href="/sign-up" class="btn btn-primary btn-lg">Get Started Now</a>
     </section>
   </div>
 </Public>

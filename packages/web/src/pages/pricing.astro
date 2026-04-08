@@ -3,63 +3,328 @@ import Public from "../layouts/Public.astro";
 ---
 
 <Public title="Pricing" description="Simple, transparent pricing for teams of all sizes.">
-  <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "3rem 2rem" }}>
-    <h1 style={{ fontSize: "2.5rem", fontWeight: "800", textAlign: "center", marginBottom: "1rem" }}>
-      Transparent Pricing
-    </h1>
-    <p style={{ textAlign: "center", color: "#a1a1aa", marginBottom: "3rem", maxWidth: "600px", margin: "0 auto 3rem" }}>
-      All plans include real-time flame graphs and cost attribution. Scale from free to enterprise.
-    </p>
+  <style>
+    .pricing-header {
+      text-align: center;
+      padding: var(--spacing-3xl) 0;
+      max-width: 600px;
+      margin: 0 auto;
+    }
 
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "2rem" }}>
-      <div style={{ background: "#1e293b", padding: "2.5rem", borderRadius: "0.75rem", border: "1px solid #334155" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Free</h2>
-        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>Perfect to get started</p>
-        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$0<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
-        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Unlimited sessions</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Real-time flame graphs</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Basic cost breakdown</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Loop detection</li>
-          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 7-day retention</li>
+    .pricing-header h1 {
+      font-size: clamp(2rem, 10vw, 2.5rem);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .pricing-header p {
+      color: var(--text-secondary);
+      font-size: var(--text-lg);
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: var(--spacing-lg);
+      margin-bottom: var(--spacing-3xl);
+    }
+
+    .pricing-card {
+      background: var(--bg-card);
+      padding: var(--spacing-xl);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      position: relative;
+      transition: all var(--transition-base);
+    }
+
+    .pricing-card.featured {
+      background: var(--bg-surface);
+      border: 2px solid var(--accent);
+      transform: scale(1.02);
+    }
+
+    .pricing-card.featured:hover {
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.2);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: white;
+      padding: var(--spacing-xs) var(--spacing-lg);
+      border-radius: 9999px;
+      font-size: var(--text-xs);
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .pricing-card h2 {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .pricing-card > p:first-of-type {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pricing-amount {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pricing-amount span {
+      font-size: var(--text-base);
+      color: var(--text-secondary);
+    }
+
+    .pricing-list {
+      list-style: none;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .pricing-list li {
+      padding: var(--spacing-md) 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+    }
+
+    .pricing-list li:last-child {
+      border-bottom: none;
+    }
+
+    .pricing-cta {
+      display: block;
+      padding: var(--spacing-md);
+      border-radius: var(--radius-md);
+      text-align: center;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all var(--transition-base);
+    }
+
+    .pricing-cta-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .pricing-cta-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .pricing-cta-secondary {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .pricing-cta-secondary:hover {
+      border-color: var(--accent);
+    }
+
+    .faq-section {
+      padding: var(--spacing-3xl) 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .faq-section h2 {
+      text-align: center;
+      margin-bottom: var(--spacing-3xl);
+    }
+
+    .faq-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      margin-bottom: var(--spacing-lg);
+      overflow: hidden;
+    }
+
+    .faq-question {
+      padding: var(--spacing-lg);
+      background: var(--bg-card);
+      border: none;
+      color: var(--text-primary);
+      font-size: var(--text-base);
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all var(--transition-base);
+    }
+
+    .faq-question:hover {
+      background: var(--bg-surface);
+      color: var(--accent);
+    }
+
+    .faq-question::after {
+      content: "+";
+      font-weight: 700;
+      font-size: 1.5rem;
+      transition: transform var(--transition-base);
+    }
+
+    .faq-item[open] .faq-question::after {
+      transform: rotate(45deg);
+    }
+
+    .faq-answer {
+      padding: var(--spacing-lg);
+      color: var(--text-secondary);
+      font-size: var(--text-base);
+      line-height: 1.6;
+      border-top: 1px solid var(--border);
+    }
+
+    .contact-section {
+      margin-top: var(--spacing-3xl);
+      padding: var(--spacing-xl);
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .contact-section h3 {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .contact-section p {
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .contact-section a {
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .contact-section a:hover {
+      color: var(--accent-hover);
+    }
+
+    @media (max-width: 768px) {
+      .pricing-card.featured {
+        transform: scale(1);
+      }
+    }
+  </style>
+
+  <div class="container">
+    <!-- Pricing Header -->
+    <section class="pricing-header">
+      <h1>Transparent Pricing</h1>
+      <p>All plans include real-time flame graphs and cost attribution. Scale from free to enterprise.</p>
+    </section>
+
+    <!-- Pricing Cards -->
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h2>Free</h2>
+        <p>Perfect to get started</p>
+        <div class="pricing-amount">$0<span>/month</span></div>
+        <ul class="pricing-list">
+          <li>✓ Unlimited sessions</li>
+          <li>✓ Real-time flame graphs</li>
+          <li>✓ Basic cost breakdown</li>
+          <li>✓ Loop detection</li>
+          <li>✓ 7-day retention</li>
         </ul>
-        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#334155", color: "#fafafa", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Start Free</a>
+        <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Start Free</a>
       </div>
 
-      <div style={{ background: "#1a1a2e", padding: "2.5rem", borderRadius: "0.75rem", border: "2px solid #6366f1", position: "relative" }}>
-        <div style={{ position: "absolute", top: "-15px", left: "50%", transform: "translateX(-50%)", background: "#6366f1", color: "white", padding: "0.4rem 1rem", borderRadius: "9999px", fontSize: "0.8rem", fontWeight: "700", textTransform: "uppercase" }}>Most Popular</div>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Pro</h2>
-        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>For growing teams</p>
-        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$49<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
-        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ 10k sessions/month</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Advanced cost breakdown</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Custom alerts (email)</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #3f3f46", color: "#a1a1aa" }}>✓ Loop & anomaly detection</li>
-          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 30-day retention</li>
+      <div class="pricing-card featured">
+        <div class="pricing-badge">Most Popular</div>
+        <h2>Pro</h2>
+        <p>For growing teams</p>
+        <div class="pricing-amount">$49<span>/month</span></div>
+        <ul class="pricing-list">
+          <li>✓ 10k sessions/month</li>
+          <li>✓ Advanced cost breakdown</li>
+          <li>✓ Custom alerts (email)</li>
+          <li>✓ Loop & anomaly detection</li>
+          <li>✓ 30-day retention</li>
         </ul>
-        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#6366f1", color: "white", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Start Free Trial</a>
+        <a href="/sign-up" class="pricing-cta pricing-cta-primary">Start Free Trial</a>
       </div>
 
-      <div style={{ background: "#1e293b", padding: "2.5rem", borderRadius: "0.75rem", border: "1px solid #334155" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Business</h2>
-        <p style={{ color: "#a1a1aa", marginBottom: "2rem" }}>For enterprises</p>
-        <div style={{ fontSize: "2.5rem", fontWeight: "700", marginBottom: "2rem" }}>$299<span style={{ fontSize: "1rem", color: "#a1a1aa" }}>/month</span></div>
-        <ul style={{ listStyle: "none", marginBottom: "2rem" }}>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Unlimited sessions</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Team workspaces</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Webhook alerts</li>
-          <li style={{ paddingY: "0.75rem", borderBottom: "1px solid #334155", color: "#a1a1aa" }}>✓ Priority support</li>
-          <li style={{ paddingY: "0.75rem", color: "#a1a1aa" }}>✓ 90-day retention</li>
+      <div class="pricing-card">
+        <h2>Business</h2>
+        <p>For enterprises</p>
+        <div class="pricing-amount">$299<span>/month</span></div>
+        <ul class="pricing-list">
+          <li>✓ Unlimited sessions</li>
+          <li>✓ Team workspaces</li>
+          <li>✓ Webhook alerts</li>
+          <li>✓ Priority support</li>
+          <li>✓ 90-day retention</li>
         </ul>
-        <a href="/sign-up" style={{ display: "block", padding: "0.75rem", background: "#334155", color: "#fafafa", textDecoration: "none", borderRadius: "0.375rem", textAlign: "center", fontWeight: "600" }}>Contact Sales</a>
+        <a href="/sign-up" class="pricing-cta pricing-cta-secondary">Contact Sales</a>
       </div>
     </div>
 
-    <div style={{ marginTop: "4rem", padding: "2rem", background: "#1e293b", borderRadius: "0.75rem", border: "1px solid #334155", textAlign: "center" }}>
-      <h3 style={{ marginBottom: "1rem" }}>Questions? We're here to help</h3>
-      <p style={{ color: "#a1a1aa", marginBottom: "1rem" }}>Contact us for custom pricing, enterprise features, or any other questions.</p>
-      <a href="mailto:sales@flamegraph.dev" style={{ color: "#6366f1", textDecoration: "none", fontWeight: "600" }}>sales@flamegraph.dev</a>
+    <!-- FAQ Section -->
+    <section class="faq-section">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-container">
+        <details class="faq-item">
+          <summary class="faq-question">Can I change my plan anytime?</summary>
+          <div class="faq-answer">
+            Yes, absolutely. You can upgrade or downgrade your plan at any time. Changes take effect at the next billing cycle.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">What happens if I exceed my session limit?</summary>
+          <div class="faq-answer">
+            We'll notify you when you're approaching your limit. You can upgrade to a higher plan instantly, or purchase additional sessions as needed.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Do you offer discounts for annual billing?</summary>
+          <div class="faq-answer">
+            We offer a 20% discount when you pay annually. Contact our sales team at sales@flamegraph.dev for details.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">What if I need a custom plan?</summary>
+          <div class="faq-answer">
+            For enterprise needs, custom session limits, or specialized features, please contact our sales team. We're happy to work with you.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">Is there a free trial for paid plans?</summary>
+          <div class="faq-answer">
+            Yes, Pro and Business plans come with a 14-day free trial. No credit card required to start.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <div class="contact-section">
+      <h3>Questions? We're here to help</h3>
+      <p>Contact us for custom pricing, enterprise features, or any other questions.</p>
+      <a href="mailto:sales@flamegraph.dev">sales@flamegraph.dev</a>
     </div>
   </div>
 </Public>
