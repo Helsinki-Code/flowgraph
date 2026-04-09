@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^8.0.4",
-    "@clerk/astro": "^1.1.0",
+    "@clerk/astro": "^2.0.0",
     "astro": "^5.0.0",
     "d3": "^7.8.5",
     "import-meta-resolve": "^4.2.0"
