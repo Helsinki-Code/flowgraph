@@ -38,7 +38,7 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
     sessionEvent = {
       id: "synthetic-root",
       session_id: events[0].session_id,
-      parent_id: null,
+      parent_id: undefined,
       workspace_id: events[0].workspace_id,
       kind: "session",
       started_at: minStart,
