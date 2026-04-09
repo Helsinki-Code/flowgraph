@@ -8,8 +8,8 @@ import { LocalCollector } from './packages/sdk/dist/collector.js';
 
 // Configuration
 const SERVER_URL = 'https://flowgraph-n8xj.onrender.com';
-const API_KEY = 'sk_a1bbbb9c885a1929d57567509eed0d0512d8dfe60e7366f6c9b112a3742c22a9';
-const WORKSPACE_ID = 'test-workspace-' + Date.now();
+const API_KEY = 'sk_dc2bb28c69b2677724922a43da0ff8af40a5fb19b30170821ccb693efed3a497';
+const WORKSPACE_ID = 'user_3C58eBbBIiPVHohUqdDHSXJagDn';
 const SESSION_ID = 'session-' + Date.now();
 
 console.log('🔥 Token Flamegraph SDK Integration Test');

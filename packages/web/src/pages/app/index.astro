@@ -192,33 +192,42 @@ instrumentAgent(agent, {
             <tr style={{ borderBottom: "1px solid #334155", background: "#0f172a" }}>
               <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>ID</th>
               <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Feature</th>
+              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Duration</th>
               <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Cost</th>
               <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Tokens</th>
               <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {sessions.map((session: any) => (
-              <tr style={{ borderBottom: "1px solid #334155" }}>
-                <td style={{ padding: "1rem" }}>
-                  <a href={`/app/sessions/${session.id}`} style={{ color: "#6366f1", textDecoration: "none" }}>
-                    {session.id.slice(0, 12)}...
-                  </a>
-                </td>
-                <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.feature || "—"}</td>
-                <td style={{ padding: "1rem", fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
-                <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.total_tokens.toLocaleString()}</td>
-                <td style={{ padding: "1rem" }}>
-                  {session.loop_detected ? (
-                    <span style={{ background: "#7c2d12", color: "#fed7aa", padding: "0.25rem 0.75rem", borderRadius: "0.25rem", fontSize: "0.8rem" }}>
-                      LOOP
-                    </span>
-                  ) : (
-                    <span style={{ color: "#22c55e" }}>OK</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {sessions.map((session: any) => {
+              const durationSec = Math.round((session.ended_at - session.started_at) / 1000);
+              return (
+                <tr
+                  style={{ borderBottom: "1px solid #334155", transition: "background 0.2s" }}
+                  onmouseover="this.style.background='rgba(255,255,255,0.03)'"
+                  onmouseout="this.style.background='transparent'"
+                >
+                  <td style={{ padding: "1rem" }}>
+                    <a href={`/app/sessions/${session.id}`} style={{ color: "#6366f1", textDecoration: "none" }}>
+                      {session.id.slice(0, 12)}...
+                    </a>
+                  </td>
+                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.feature || "—"}</td>
+                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{durationSec}s</td>
+                  <td style={{ padding: "1rem", fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
+                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{(session.total_tokens || 0).toLocaleString()}</td>
+                  <td style={{ padding: "1rem" }}>
+                    {session.loop_detected ? (
+                      <span style={{ background: "#7c2d12", color: "#fed7aa", padding: "0.25rem 0.75rem", borderRadius: "0.25rem", fontSize: "0.8rem" }}>
+                        LOOP
+                      </span>
+                    ) : (
+                      <span style={{ color: "#22c55e" }}>OK</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -86,33 +86,41 @@ if (token) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
             gap: "1rem",
             marginBottom: "2rem",
           }}
         >
-          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
               Total Cost
             </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#f97316" }}>
               ${session.total_cost_usd.toFixed(4)}
             </div>
           </div>
-          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
               Total Tokens
             </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
-              {session.total_tokens.toLocaleString()}
+            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
+              {(session.total_tokens || 0).toLocaleString()}
             </div>
           </div>
-          <div style={{ background: "#1e293b", padding: "1rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
               Turns
             </div>
-            <div style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
               {session.turn_count}
+            </div>
+          </div>
+          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
+              Duration
+            </div>
+            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
+              {Math.round((session.ended_at - session.started_at) / 1000)}s
             </div>
           </div>
         </div>
