@@ -25,6 +25,9 @@ jobs:
       - name: Secret Scan
         run: npm run secret:scan
 
+      - name: Audit
+        run: npm audit --audit-level=high
+
       - name: Tests
         run: npm run test
 

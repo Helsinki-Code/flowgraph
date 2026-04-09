@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import crypto from "crypto";
+import * as Sentry from "@sentry/node";
 import { buildFlameTree, computeTreeMetrics } from "./flamegraph/builder.js";
 import type { QueryBudget, QueryEvent, QuerySession } from "@flamegraph/storage";
 import { TursoStore } from "@flamegraph/storage";
@@ -13,6 +14,15 @@ import {
   extractAgentId,
   getEventTokenCount,
 } from "./analytics/session-intelligence.js";
+
+// Initialize Sentry for error tracking
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "production",
+    tracesSampleRate: 0.1, // 10% of requests
+  });
+}
 
 type GroupBy = "tool" | "model" | "feature" | "engineer";
 
@@ -1269,6 +1279,17 @@ app.post("/v1/webhooks/stripe", async (request, reply) => {
       "Stripe webhook handling failed.",
     );
   }
+});
+
+/**
+ * Global error handler — capture in Sentry
+ */
+app.setErrorHandler((error, request, reply) => {
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(error);
+  }
+  app.log.error(error);
+  reply.code(500).send({ error: "internal server error" });
 });
 
 /**
