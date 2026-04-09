@@ -10,17 +10,19 @@
     "dev": "astro dev --host",
     "build": "astro build",
     "preview": "astro preview",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@astrojs/vercel": "^8.0.4",
     "@clerk/astro": "^3.0.12",
-    "astro": "^6.1.5",
+    "astro": "^5.18.0",
     "d3": "^7.8.5",
     "fastify": "5.8.4",
     "import-meta-resolve": "^4.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/d3": "^7.4.0",
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0"

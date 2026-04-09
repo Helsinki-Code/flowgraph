@@ -36,3 +36,12 @@ jobs:
 
       - name: Build Web
         run: npm run build:web
+
+      - name: E2E Tests
+        run: npm run test:e2e --prefix packages/web
+        env:
+          TEST_CLERK_SESSION: ${{ secrets.TEST_CLERK_SESSION }}
+          TEST_API_KEY: ${{ secrets.TEST_API_KEY }}
+          TEST_SESSION_ID: ${{ secrets.TEST_SESSION_ID }}
+          BASE_URL: https://eddieai.online
+          SERVER_URL: https://flowgraph-n8xj.onrender.com
