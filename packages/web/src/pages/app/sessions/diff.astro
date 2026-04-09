@@ -1,0 +1,170 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../../layouts/Dashboard.astro";
+import { API_URL } from "../../../lib/api";
+import { fetchJsonWithTimeout } from "../../../lib/server-fetch";
+
+let userId, token;
+try {
+  if (!Astro.locals?.auth) return Astro.redirect("/sign-in");
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  token = auth?.getToken ? await auth.getToken() : null;
+  if (!userId) return Astro.redirect("/sign-in");
+} catch (e) {
+  console.error("Auth error in /app/sessions/diff:", e);
+  return Astro.redirect("/sign-in");
+}
+
+const baseSessionId = Astro.url.searchParams.get("base") || "";
+const targetSessionId = Astro.url.searchParams.get("target") || "";
+
+let sessions: any[] = [];
+let diff: any = null;
+let error: string | null = null;
+
+if (token) {
+  try {
+    const sessionsData = await fetchJsonWithTimeout<{ sessions: any[] }>(
+      `${API_URL}/v1/sessions?limit=100`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    sessions = sessionsData.sessions || [];
+
+    if (baseSessionId && targetSessionId) {
+      const diffData = await fetchJsonWithTimeout<{ diff: any }>(
+        `${API_URL}/v1/sessions/diff?base_session_id=${encodeURIComponent(baseSessionId)}&target_session_id=${encodeURIComponent(targetSessionId)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeoutMs: 8000,
+          retries: 1,
+        },
+      );
+      diff = diffData.diff;
+    }
+  } catch (e: any) {
+    error = `Failed to load comparison data: ${e.message}`;
+  }
+}
+---
+
+<Dashboard title="Session Diff" description="Compare two runs for cost, token, and reliability regressions">
+  <style>
+    .panel {
+      background: #111118;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    select, .btn {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      border-radius: 0.45rem;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.9rem;
+    }
+    .btn {
+      background: #f97316;
+      border-color: transparent;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.75rem;
+      align-items: end;
+    }
+    .metric {
+      border: 1px solid #243244;
+      border-radius: 10px;
+      padding: 0.85rem;
+      background: #0b1220;
+    }
+    .metric .k { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .metric .v { color: #e2e8f0; font-weight: 700; font-size: 1.1rem; margin-top: 0.3rem; }
+    .delta.up { color: #f87171; }
+    .delta.down { color: #34d399; }
+    .delta.flat { color: #93c5fd; }
+  </style>
+
+  <div class="panel">
+    <form class="grid" method="get">
+      <label>
+        <div style={{ marginBottom: "0.4rem", color: "#94a3b8", fontSize: "0.82rem" }}>Base session</div>
+        <select name="base" required>
+          <option value="">Select session</option>
+          {sessions.map((session) => (
+            <option value={session.id} selected={baseSessionId === session.id}>
+              {session.id.slice(0, 12)} • ${session.total_cost_usd.toFixed(4)} • {(session.total_tokens || 0).toLocaleString()} tokens
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <div style={{ marginBottom: "0.4rem", color: "#94a3b8", fontSize: "0.82rem" }}>Target session</div>
+        <select name="target" required>
+          <option value="">Select session</option>
+          {sessions.map((session) => (
+            <option value={session.id} selected={targetSessionId === session.id}>
+              {session.id.slice(0, 12)} • ${session.total_cost_usd.toFixed(4)} • {(session.total_tokens || 0).toLocaleString()} tokens
+            </option>
+          ))}
+        </select>
+      </label>
+      <button class="btn" type="submit">Compare Sessions</button>
+    </form>
+  </div>
+
+  {error && (
+    <div class="panel" style={{ borderColor: "#7f1d1d", background: "#2a1111", color: "#fecaca" }}>
+      {error}
+    </div>
+  )}
+
+  {diff && (
+    <>
+      <div class="panel">
+        <h3 style={{ marginBottom: "0.8rem" }}>Core Metrics</h3>
+        <div class="grid">
+          {Object.entries(diff.metrics).map(([key, value]: [string, any]) => (
+            <div class="metric">
+              <div class="k">{key}</div>
+              <div class="v">
+                {typeof value.target === "number" ? value.target.toLocaleString(undefined, { maximumFractionDigits: 4 }) : value.target}
+              </div>
+              <div class={`delta ${value.delta > 0 ? "up" : value.delta < 0 ? "down" : "flat"}`}>
+                Δ {value.delta.toLocaleString(undefined, { maximumFractionDigits: 4 })} ({value.deltaPct.toFixed(1)}%)
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style={{ marginBottom: "0.8rem" }}>Top Regressions</h3>
+        {diff.regressions.length === 0 ? (
+          <p style={{ color: "#94a3b8" }}>No positive-cost or positive-token regressions detected.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            {diff.regressions.map((regression: any) => (
+              <div class="metric">
+                <div style={{ fontWeight: "700", color: "#f8fafc" }}>{regression.key}</div>
+                <div style={{ color: "#93c5fd", fontSize: "0.84rem", marginTop: "0.35rem" }}>
+                  Cost +${regression.deltaCostUsd.toFixed(4)} • Tokens +{regression.deltaTokens.toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )}
+</Dashboard>
+

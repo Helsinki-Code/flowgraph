@@ -84,6 +84,7 @@ export interface ToolExecSpan {
 export interface InstrumentOptions {
   collector: EventCollector;
   workspaceId: string;
+  agentId?: string;
   feature?: string;
   prNumber?: string;
   engineerId?: string;
@@ -115,6 +116,7 @@ export interface LlmCallData {
   costUsd: number;
   stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
   endedAt: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ToolExecStartData {
@@ -123,6 +125,7 @@ export interface ToolExecStartData {
   toolName: string;
   inputBytes: number;
   startedAt: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ToolExecEndData {
@@ -138,4 +141,5 @@ export interface ContextBuildData {
   estimatedTokens: number;
   durationMs: number;
   endedAt?: number;
+  metadata?: Record<string, unknown>;
 }

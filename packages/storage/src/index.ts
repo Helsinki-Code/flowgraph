@@ -13,4 +13,6 @@ export {
   type QueryWorkspace,
   type QueryAlert,
   type QueryApiKey,
+  type QueryBudget,
+  type QueryBudgetViolation,
 } from "./schema.js";

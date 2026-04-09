@@ -3,7 +3,7 @@
  * Compatible with both SQLite and PostgreSQL
  */
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /**
  * SQL statements to initialize the schema
@@ -126,6 +126,44 @@ export const SCHEMA_INIT_SQL = [
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS idx_ingest_requests_workspace_key ON ingest_requests(workspace_id, idempotency_key)`,
+
+  // Budget policies (Phase 3)
+  `CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    scope TEXT NOT NULL, -- session | agent | call
+    metric TEXT NOT NULL, -- cost_usd | tokens
+    target TEXT,
+    limit_value REAL NOT NULL,
+    action TEXT NOT NULL DEFAULT 'warn', -- warn | block
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_budgets_workspace ON budgets(workspace_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_budgets_scope ON budgets(scope)`,
+
+  // Budget violations/audit trail
+  `CREATE TABLE IF NOT EXISTS budget_violations (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    budget_id TEXT NOT NULL,
+    session_id TEXT,
+    event_id TEXT,
+    scope TEXT NOT NULL,
+    target TEXT,
+    metric TEXT NOT NULL,
+    current_value REAL NOT NULL,
+    limit_value REAL NOT NULL,
+    action TEXT NOT NULL,
+    details TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+    FOREIGN KEY (budget_id) REFERENCES budgets(id)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_budget_violations_workspace ON budget_violations(workspace_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_budget_violations_session ON budget_violations(session_id)`,
 ];
 
 /**
@@ -199,5 +237,34 @@ export interface QueryAlert {
   webhook_url?: string;
   email?: string;
   enabled: 0 | 1;
+  created_at: number;
+}
+
+export interface QueryBudget {
+  id: string;
+  workspace_id: string;
+  name: string;
+  scope: "session" | "agent" | "call";
+  metric: "cost_usd" | "tokens";
+  target?: string;
+  limit_value: number;
+  action: "warn" | "block";
+  enabled: 0 | 1;
+  created_at: number;
+}
+
+export interface QueryBudgetViolation {
+  id: string;
+  workspace_id: string;
+  budget_id: string;
+  session_id?: string;
+  event_id?: string;
+  scope: "session" | "agent" | "call";
+  target?: string;
+  metric: "cost_usd" | "tokens";
+  current_value: number;
+  limit_value: number;
+  action: "warn" | "block";
+  details?: string;
   created_at: number;
 }

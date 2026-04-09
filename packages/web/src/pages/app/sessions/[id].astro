@@ -6,7 +6,7 @@ import FlameGraphViewer from "../../../components/FlameGraphViewer.astro";
 import { API_URL } from "../../../lib/api";
 import { fetchJsonWithTimeout } from "../../../lib/server-fetch";
 
-let userId, orgId, token;
+let userId, token;
 try {
   if (!Astro.locals?.auth) {
     return Astro.redirect("/sign-in");
@@ -14,7 +14,6 @@ try {
 
   const auth = Astro.locals.auth();
   userId = auth?.userId;
-  orgId = auth?.orgId;
   token = auth?.getToken ? await auth.getToken() : null;
 
   if (!userId) {
@@ -26,28 +25,62 @@ try {
 }
 
 const { id } = Astro.params;
-let session = null;
-let tree = null;
-let metrics = null;
-let error = null;
+let session: any = null;
+let tree: any = null;
+let metrics: any = null;
+let error: string | null = null;
+let contextEntries: any[] = [];
+let wasteReport: any = null;
+let topology: any = null;
+let budgetViolations: any[] = [];
+let liveSeed: any[] = [];
 
 if (token) {
   try {
-    const [sessionData, treeData] = await Promise.all([
+    const [
+      sessionData,
+      treeData,
+      contextData,
+      wasteData,
+      topologyData,
+      violationsData,
+      liveData,
+    ] = await Promise.all([
       fetchJsonWithTimeout<{ session: any }>(`${API_URL}/v1/sessions/${id}`, {
-        headers: { "Authorization": `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
         timeoutMs: 8000,
         retries: 1,
       }),
       fetchJsonWithTimeout<{ tree: any; metrics: any }>(`${API_URL}/v1/sessions/${id}/flamegraph`, {
-        headers: { "Authorization": `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
         timeoutMs: 8000,
         retries: 1,
       }),
+      fetchJsonWithTimeout<{ entries: any[] }>(`${API_URL}/v1/sessions/${id}/context-anatomy`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => ({ entries: [] })),
+      fetchJsonWithTimeout<{ report: any }>(`${API_URL}/v1/sessions/${id}/waste-report`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => ({ report: null })),
+      fetchJsonWithTimeout<{ topology: any }>(`${API_URL}/v1/sessions/${id}/topology`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => ({ topology: null })),
+      fetchJsonWithTimeout<{ violations: any[] }>(`${API_URL}/v1/sessions/${id}/budget-violations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => ({ violations: [] })),
+      fetchJsonWithTimeout<{ events: any[] }>(`${API_URL}/v1/sessions/${id}/live?cursor=0&limit=40`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => ({ events: [] })),
     ]);
+
     session = sessionData.session;
     tree = treeData.tree;
     metrics = treeData.metrics;
+    contextEntries = contextData.entries || [];
+    wasteReport = wasteData.report || null;
+    topology = topologyData.topology || null;
+    budgetViolations = violationsData.violations || [];
+    liveSeed = liveData.events || [];
   } catch (e: any) {
     error = `Failed to load session: ${e.message}`;
   }
@@ -58,321 +91,341 @@ if (token) {
 
 <Dashboard title={`Session ${id?.slice(0, 12)}`} description="Flame graph analysis and cost breakdown">
   <style>
-    .breadcrumb {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 2rem;
-      font-size: 0.95rem;
-      color: #94a3b8;
-    }
-
-    .breadcrumb a {
-      color: #3b82f6;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .breadcrumb a:hover {
-      color: #60a5fa;
-    }
-
-    .breadcrumb-current {
-      color: #e2e8f0;
-      font-weight: 500;
-    }
-
     .error-banner {
       padding: 1rem;
       border-radius: 0.5rem;
       background: #7f1d1d;
-      color: #fca5a5;
-      margin-bottom: 1.5rem;
+      color: #fecaca;
+      margin-bottom: 1rem;
       border: 1px solid #991b1b;
       font-size: 0.9rem;
     }
 
     .metric-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.8rem;
+      margin-bottom: 1rem;
     }
 
     .metric-card {
       background: #111118;
       border: 1px solid #1e1e2e;
       border-radius: 12px;
-      padding: 1.5rem;
-      transition: all 0.2s;
-    }
-
-    .metric-card:hover {
-      border-color: #334155;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .metric-icon {
-      width: 24px;
-      height: 24px;
-      margin-bottom: 0.75rem;
-      opacity: 0.7;
+      padding: 1rem;
     }
 
     .metric-label {
       font-size: 0.75rem;
       color: #94a3b8;
       text-transform: uppercase;
-      font-weight: 600;
       letter-spacing: 0.05em;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
 
     .metric-value {
-      font-size: 1.75rem;
+      font-size: 1.2rem;
       font-weight: 700;
+      color: #f8fafc;
       font-family: "JetBrains Mono", monospace;
-      color: #e2e8f0;
     }
 
-    .metric-value.cost {
-      color: #f97316;
-    }
-
-    .loop-warning {
-      padding: 1rem;
-      border-radius: 0.5rem;
-      background: #7c2d12;
-      color: #fed7aa;
-      margin-bottom: 1.5rem;
-      border: 1px solid #f97316;
-      font-size: 0.9rem;
-    }
-
-    .section-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: #e2e8f0;
-    }
-
-    .flame-graph-card {
-      background: #0a0a10;
-      border: 1px solid #1e1e2e;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-      overflow: hidden;
-    }
-
-    .details-grid {
+    .section-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
 
-    .detail-card {
+    .panel {
       background: #111118;
       border: 1px solid #1e1e2e;
       border-radius: 12px;
-      padding: 1.5rem;
+      padding: 1rem;
     }
 
-    .detail-card h4 {
+    .panel h3 {
+      margin: 0 0 0.7rem;
       font-size: 0.95rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: #e2e8f0;
+      color: #f8fafc;
     }
 
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid #1e1e2e;
-      font-size: 0.9rem;
-    }
-
-    .detail-row:last-child {
-      border-bottom: none;
-    }
-
-    .detail-label {
+    .meta {
+      font-size: 0.82rem;
       color: #94a3b8;
     }
 
-    .detail-value {
-      color: #e2e8f0;
+    .insight-card {
+      background: #0b1220;
+      border: 1px solid #1f2a3a;
+      border-radius: 10px;
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .insight-title {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.3rem;
+    }
+
+    .pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 0.12rem 0.45rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      margin-left: 0.35rem;
+    }
+
+    .pill.high {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
+
+    .pill.medium {
+      background: #78350f;
+      color: #fde68a;
+    }
+
+    .pill.low {
+      background: #1e3a8a;
+      color: #bfdbfe;
+    }
+
+    .live-feed {
+      background: #070d18;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      max-height: 260px;
+      overflow: auto;
+      padding: 0.8rem;
       font-family: "JetBrains Mono", monospace;
-      font-size: 0.85rem;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: #bfdbfe;
+    }
+
+    .live-row {
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      padding: 0.3rem 0;
+    }
+
+    .live-row:last-child {
+      border-bottom: none;
     }
 
     .back-button {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      background: transparent;
+      gap: 0.4rem;
+      padding: 0.65rem 1rem;
+      border-radius: 0.45rem;
       border: 1px solid #334155;
       color: #cbd5e1;
-      border-radius: 0.5rem;
       text-decoration: none;
-      transition: all 0.2s;
-      font-size: 0.9rem;
+      margin-top: 0.8rem;
     }
 
-    .back-button:hover {
-      background: rgba(51, 65, 85, 0.3);
-      border-color: #475569;
-      color: #e2e8f0;
-    }
-
-    @media (max-width: 768px) {
-      .metric-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .details-grid {
+    @media (max-width: 900px) {
+      .section-grid {
         grid-template-columns: 1fr;
       }
     }
   </style>
 
-  {
-    error && (
-      <div class="error-banner">
-        {error}
+  {error && <div class="error-banner">{error}</div>}
+
+  {session && (
+    <>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">Total Cost</div>
+          <div class="metric-value">${session.total_cost_usd.toFixed(4)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Total Tokens</div>
+          <div class="metric-value">{(session.total_tokens || 0).toLocaleString()}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Turns</div>
+          <div class="metric-value">{session.turn_count || 0}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Duration</div>
+          <div class="metric-value">{Math.max(0, Math.round(((session.ended_at || session.started_at) - session.started_at) / 1000))}s</div>
+        </div>
       </div>
-    )
-  }
 
-  {
-    session && (
-      <>
-        <div class="breadcrumb">
-          <a href="/app">Sessions</a>
-          <span>/</span>
-          <span class="breadcrumb-current">{id?.slice(0, 12)}</span>
+      {tree ? (
+        <div class="panel" style={{ marginBottom: "1rem" }}>
+          <FlameGraphViewer tree={tree} sessionId={id} />
         </div>
-
-        <div class="metric-grid">
-          <div class="metric-card">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="8"></circle>
-              <path d="M12 6v12M8 10h8"></path>
-            </svg>
-            <div class="metric-label">Total Cost</div>
-            <div class="metric-value cost">
-              ${session.total_cost_usd.toFixed(4)}
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M3 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6M3 9h18"></path>
-            </svg>
-            <div class="metric-label">Total Tokens</div>
-            <div class="metric-value">
-              {(session.total_tokens || 0).toLocaleString()}
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <div class="metric-label">Turns</div>
-            <div class="metric-value">
-              {session.turn_count}
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <div class="metric-label">Duration</div>
-            <div class="metric-value">
-              {Math.round((session.ended_at - session.started_at) / 1000)}s
-            </div>
-          </div>
+      ) : (
+        <div class="panel" style={{ marginBottom: "1rem" }}>
+          <div class="meta">No flame graph data yet.</div>
         </div>
+      )}
 
-        {session.loop_detected && (
-          <div class="loop-warning">
-            <strong>⚠ Warning:</strong> Possible infinite loop detected. Check the flame graph for repeated tool calls.
-          </div>
-        )}
-
-        {tree ? (
-          <div class="flame-graph-card">
-            <FlameGraphViewer tree={tree} sessionId={id} />
-          </div>
-        ) : (
-          <div style={{
-            background: "#111118",
-            border: "1px solid #1e1e2e",
-            borderRadius: "12px",
-            padding: "3rem 2rem",
-            marginBottom: "2rem",
-            textAlign: "center",
-          }}>
-            <div style={{ fontSize: "1rem", fontWeight: "600", color: "#cbd5e1", marginBottom: "0.5rem" }}>
-              No flame graph data
-            </div>
-            <div style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
-              Events may still be processing. <a href="" style={{ color: "#3b82f6", textDecoration: "none" }}>Refresh the page</a> in a moment.
-            </div>
-          </div>
-        )}
-
-        <div class="details-grid">
-          <div class="detail-card">
-            <h4>Session Details</h4>
-            <div class="detail-row">
-              <span class="detail-label">ID</span>
-              <span class="detail-value">{session.id}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Started</span>
-              <span class="detail-value">{new Date(session.started_at).toISOString()}</span>
-            </div>
-            {session.feature && (
-              <div class="detail-row">
-                <span class="detail-label">Feature</span>
-                <span class="detail-value">{session.feature}</span>
+      <div class="section-grid">
+        <div class="panel">
+          <h3>Context Window Anatomy</h3>
+          {contextEntries.length === 0 ? (
+            <div class="meta">No context anatomy available.</div>
+          ) : (
+            contextEntries.slice(0, 6).map((entry: any) => (
+              <div class="insight-card">
+                <div class="insight-title">{entry.model} • {(entry.inputTokens || 0).toLocaleString()} input tokens</div>
+                <div class="meta">
+                  System {entry.segments?.systemPromptTokens || 0} • History {entry.segments?.historyTokens || 0} • Tool {entry.segments?.toolResultTokens || 0} • Current {entry.segments?.currentTurnTokens || 0}
+                </div>
+                <div class="meta" style={{ marginTop: "0.25rem" }}>
+                  Remaining {(entry.remainingContextTokens || 0).toLocaleString()} / {(entry.maxContextTokens || 0).toLocaleString()} ({entry.source})
+                </div>
               </div>
-            )}
-          </div>
-
-          {metrics && (
-            <div class="detail-card">
-              <h4>Quick Stats</h4>
-              <div class="detail-row">
-                <span class="detail-label">Avg Tokens/Turn</span>
-                <span class="detail-value">
-                  {session.turn_count > 0 ? Math.round(session.total_tokens / session.turn_count) : 0}
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Avg Cost/Turn</span>
-                <span class="detail-value">
-                  ${(session.total_cost_usd / (session.turn_count || 1)).toFixed(4)}
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Max Depth</span>
-                <span class="detail-value">{metrics.maxDepth}</span>
-              </div>
-            </div>
+            ))
           )}
         </div>
 
-        <a href="/app" class="back-button">
-          ← Back to Sessions
-        </a>
-      </>
-    )
-  }
+        <div class="panel">
+          <h3>Wasted Token Report</h3>
+          {!wasteReport ? (
+            <div class="meta">Waste report unavailable.</div>
+          ) : (
+            <>
+              <div class="insight-card">
+                <div class="insight-title">Potential waste {(wasteReport.totalWastedTokens || 0).toLocaleString()} tokens</div>
+                <div class="meta">Potential savings ${(wasteReport.totalPotentialSavingsUsd || 0).toFixed(4)}</div>
+              </div>
+              {(wasteReport.findings || []).slice(0, 4).map((finding: any) => (
+                <div class="insight-card">
+                  <div class="insight-title">
+                    {finding.category}
+                    <span class={`pill ${finding.severity}`}>{finding.severity}</span>
+                  </div>
+                  <div class="meta">{finding.description}</div>
+                  <div class="meta" style={{ marginTop: "0.25rem" }}>
+                    {(finding.wastedTokens || 0).toLocaleString()} tokens • ${Number(finding.wastedCostUsd || 0).toFixed(4)}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div class="section-grid">
+        <div class="panel">
+          <h3>Multi-Agent Topology</h3>
+          {!topology ? (
+            <div class="meta">Topology unavailable.</div>
+          ) : (
+            <>
+              <div class="insight-card">
+                <div class="insight-title">Agents {(topology.nodes || []).length} • Handoffs {(topology.edges || []).length}</div>
+                <div class="meta">Critical path {Math.round((topology.criticalPathDurationMs || 0) / 1000)}s</div>
+              </div>
+              {(topology.nodes || []).slice(0, 6).map((node: any) => (
+                <div class="insight-card">
+                  <div class="insight-title">{node.id}</div>
+                  <div class="meta">${(node.costUsd || 0).toFixed(4)} • {(node.tokens || 0).toLocaleString()} tokens • {node.eventCount} spans</div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div class="panel">
+          <h3>Budget Violations</h3>
+          {budgetViolations.length === 0 ? (
+            <div class="meta">No budget violations recorded.</div>
+          ) : (
+            budgetViolations.slice(0, 6).map((violation: any) => (
+              <div class="insight-card">
+                <div class="insight-title">
+                  {violation.scope}/{violation.metric}
+                  <span class={`pill ${violation.action === "block" ? "high" : "medium"}`}>{violation.action}</span>
+                </div>
+                <div class="meta">current {Number(violation.current_value || 0).toFixed(2)} • limit {Number(violation.limit_value || 0).toFixed(2)}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Live Streaming Trace (Beta)</h3>
+        <div class="meta" style={{ marginBottom: "0.55rem" }}>
+          Polls every 3 seconds while this session is still active.
+        </div>
+        <div id="live-feed" class="live-feed">
+          {liveSeed.length === 0 ? (
+            <div class="live-row">No live events yet.</div>
+          ) : (
+            liveSeed.slice(-20).map((event: any) => (
+              <div class="live-row">
+                {event.kind} • {event.agentId || "primary"} • {(event.tokens || 0).toLocaleString()} tokens • ${Number(event.costUsd || 0).toFixed(4)}
+              </div>
+            ))
+          )}
+        </div>
+        <div id="live-status" class="meta" style={{ marginTop: "0.55rem" }}>Live feed connected.</div>
+      </div>
+
+      <a href="/app" class="back-button">Back to Sessions</a>
+
+      <script define:vars={{ API_URL, token, id, sessionEnded: Boolean(session?.ended_at), initialLiveSeed: liveSeed.slice(-20) }}>
+        const feed = document.getElementById("live-feed");
+        const status = document.getElementById("live-status");
+        let cursor = initialLiveSeed.length > 0
+          ? Math.max(...initialLiveSeed.map((event) => Number(event.startedAt || 0))) + 1
+          : 0;
+        let stopped = Boolean(sessionEnded);
+
+        function appendRow(event) {
+          if (!feed) return;
+          const row = document.createElement("div");
+          row.className = "live-row";
+          row.textContent = `${event.kind} • ${event.agentId || "primary"} • ${(event.tokens || 0).toLocaleString()} tokens • $${Number(event.costUsd || 0).toFixed(4)}`;
+          feed.appendChild(row);
+          while (feed.children.length > 80) {
+            feed.removeChild(feed.firstChild);
+          }
+          feed.scrollTop = feed.scrollHeight;
+        }
+
+        async function poll() {
+          if (stopped) return;
+          try {
+            const response = await fetch(`${API_URL}/v1/sessions/${id}/live?cursor=${cursor}&limit=100`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!response.ok) {
+              status.textContent = `Live feed error: ${response.status}`;
+              return;
+            }
+            const data = await response.json();
+            const events = data.events || [];
+            for (const event of events) appendRow(event);
+            cursor = Number(data.cursor || cursor);
+            if (data.isComplete) {
+              stopped = true;
+              status.textContent = "Session completed. Live polling stopped.";
+              return;
+            }
+            status.textContent = events.length > 0 ? `Received ${events.length} new span(s).` : "Waiting for new spans...";
+          } catch (err) {
+            status.textContent = "Live feed temporarily unavailable. Retrying...";
+          }
+        }
+
+        if (!stopped) {
+          setInterval(poll, 3000);
+        } else {
+          status.textContent = "Session already completed.";
+        }
+      </script>
+    </>
+  )}
 </Dashboard>

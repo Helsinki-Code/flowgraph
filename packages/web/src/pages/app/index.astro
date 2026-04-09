@@ -122,6 +122,10 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
   .sessions-header {
     padding: 1.5rem;
     border-bottom: 1px solid #1e1e2e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
   }
 
   .sessions-header h2 {
@@ -129,6 +133,25 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
     font-weight: 600;
     margin: 0;
     color: #e2e8f0;
+  }
+
+  .compare-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    padding: 0.45rem 0.7rem;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .compare-link:hover {
+    border-color: #60a5fa;
+    color: #93c5fd;
   }
 
   .table-wrapper {
@@ -366,10 +389,15 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
   <div class="sessions-container">
     <div class="sessions-header">
       <h2>Recent Sessions</h2>
+      {sessions.length >= 2 && (
+        <a class="compare-link" href="/app/sessions/diff">
+          Compare Sessions
+        </a>
+      )}
     </div>
     {sessions.length === 0 ? (
       <div class="empty-state">
-        <div class="empty-state-icon">🔥</div>
+        <div class="empty-state-icon">ðŸ”¥</div>
         <h2 class="empty-state-title">Token Flame Graph</h2>
         <p class="empty-state-description">
           A profiler for AI agents. Every LLM call, tool call, and context window your agent touches gets
@@ -408,11 +436,11 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
           <h3 class="setup-title">Get started in 3 steps</h3>
           <div class="step">
             <div class="step-number">1 Install SDK</div>
-            <code class="step-code">npm install @flamegraph/sdk</code>
+            <code class="step-code">npm install flamegraph-sdk</code>
           </div>
           <div class="step">
             <div class="step-number">2 Instrument your agent</div>
-            <code class="step-code">{`import { LocalCollector } from "@flamegraph/sdk";
+            <code class="step-code">{`import { LocalCollector } from "flamegraph-sdk";
 instrumentAgent(agent, {
   collector: new LocalCollector({
     serverUrl: "https://api.example.com",
@@ -428,7 +456,7 @@ instrumentAgent(agent, {
 
         <div style={{ textAlign: "center" }}>
           <a href="/app/settings" class="cta-button">
-            → Go to Settings to get your API key
+            â†’ Go to Settings to get your API key
           </a>
         </div>
       </div>
@@ -455,7 +483,7 @@ instrumentAgent(agent, {
                       {session.id.slice(0, 12)}...
                     </a>
                   </td>
-                  <td>{session.feature || "—"}</td>
+                  <td>{session.feature || "â€”"}</td>
                   <td>{durationSec}s</td>
                   <td style={{ fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
                   <td>{(session.total_tokens || 0).toLocaleString()}</td>
@@ -464,7 +492,7 @@ instrumentAgent(agent, {
                       <span class="status-loop">LOOP DETECTED</span>
                     ) : (
                       <span class="status-ok">
-                        <span>✓</span>
+                        <span>âœ“</span>
                         OK
                       </span>
                     )}
@@ -478,3 +506,4 @@ instrumentAgent(agent, {
     )}
   </div>
 </Dashboard>
+

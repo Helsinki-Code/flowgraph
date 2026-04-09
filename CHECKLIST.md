@@ -1,8 +1,8 @@
-# Token Flame Graph — Build Checklist ✅
+# Token Flame Graph â€” Build Checklist âœ…
 
 Security and GA hardening checklist for production launch.
 
-## Core SDK ✅
+## Core SDK âœ…
 
 - [x] Event model (`FlamegraphEvent` interface)
 - [x] Event collector (`LocalCollector` class)
@@ -13,9 +13,9 @@ Security and GA hardening checklist for production launch.
 - [x] Unit tests (session lifecycle, parent-child nesting, cost attribution)
 - [x] No pi-mono code changes required
 
-## Storage Layer ✅
+## Storage Layer âœ…
 
-- [ ] SQLite adapter for development (`sqlite-store.ts`) — currently stubbed
+- [ ] SQLite adapter for development (`sqlite-store.ts`) â€” currently stubbed
 - [x] SQL schema (SQLite + PostgreSQL compatible)
 - [x] Session CRUD operations
 - [x] Event insertion and querying
@@ -24,7 +24,7 @@ Security and GA hardening checklist for production launch.
 - [x] Multi-workspace isolation
 - [x] Typed query results
 
-## API Server ✅
+## API Server âœ…
 
 - [x] Fastify setup with CORS
 - [x] Event ingest route (`POST /v1/events`)
@@ -36,7 +36,7 @@ Security and GA hardening checklist for production launch.
 - [x] Error handling
 - [x] Graceful shutdown
 
-## Flame Graph Construction ✅
+## Flame Graph Construction âœ…
 
 - [x] Tree builder (`buildFlameTree()`)
 - [x] Event-to-node conversion
@@ -45,14 +45,14 @@ Security and GA hardening checklist for production launch.
 - [x] Loop flagging (3+ consecutive tool calls)
 - [x] Tree metrics computation
 
-## Web Dashboard ✅
+## Web Dashboard âœ…
 
 **Pages:**
-- [x] Index (`/`) — Sessions list with cost cards
-- [x] Session detail (`/sessions/[id]`) — Flame graph + breakdown
-- [x] Cost analysis (`/cost`) — Cost attribution by grouping
-- [x] Alerts (`/alerts`) — Alert configuration UI
-- [x] Billing (`/billing`) — Stripe subscription management
+- [x] Index (`/`) â€” Sessions list with cost cards
+- [x] Session detail (`/sessions/[id]`) â€” Flame graph + breakdown
+- [x] Cost analysis (`/cost`) â€” Cost attribution by grouping
+- [x] Alerts (`/alerts`) â€” Alert configuration UI
+- [x] Billing (`/billing`) â€” Stripe subscription management
 
 **Components:**
 - [x] Dashboard layout (sidebar nav, header, main content)
@@ -68,7 +68,7 @@ Security and GA hardening checklist for production launch.
 - [x] Astro SSR
 - [x] React island for D3 visualization
 
-## Data Model ✅
+## Data Model âœ…
 
 - [x] FlamegraphEvent: complete event schema
 - [x] FlameNode: tree structure for D3
@@ -77,7 +77,7 @@ Security and GA hardening checklist for production launch.
 - [x] Tool execution details
 - [x] Context window tracking
 
-## Configuration ✅
+## Configuration âœ…
 
 - [x] Root `package.json` (npm workspaces)
 - [x] Root `tsconfig.json`
@@ -87,13 +87,13 @@ Security and GA hardening checklist for production launch.
 - [x] Environment variables (`.env.example`)
 - [x] `.gitignore`
 
-## Documentation ✅
+## Documentation âœ…
 
-- [x] [README.md](./README.md) — Project overview
-- [x] [QUICKSTART.md](./QUICKSTART.md) — Get running in 5 min
-- [x] [EXAMPLE.md](./EXAMPLE.md) — Integration examples
-- [x] [DEPLOYMENT.md](./DEPLOYMENT.md) — Production setup
-- [x] [BUILD_SUMMARY.md](./BUILD_SUMMARY.md) — Architecture deep-dive
+- [x] [README.md](./README.md) â€” Project overview
+- [x] [QUICKSTART.md](./QUICKSTART.md) â€” Get running in 5 min
+- [x] [EXAMPLE.md](./EXAMPLE.md) â€” Integration examples
+- [x] [DEPLOYMENT.md](./DEPLOYMENT.md) â€” Production setup
+- [x] [BUILD_SUMMARY.md](./BUILD_SUMMARY.md) â€” Architecture deep-dive
 - [x] This checklist
 
 ## What's NOT Included (Intentional)
@@ -102,7 +102,7 @@ Security and GA hardening checklist for production launch.
 - [x] Stripe webhook signature verification and basic subscription handling
 - [ ] PostgreSQL adapter (schema is compatible, just needs instantiation)
 - [ ] Alert execution (config UI ready, webhook delivery not implemented)
-- [ ] Session export (CSV, JSON — easy to add)
+- [ ] Session export (CSV, JSON â€” easy to add)
 - [ ] Advanced D3 features (zoom, time slider, search)
 - [ ] Email notifications (alert infrastructure ready)
 - [ ] GitHub integration (for PR cost tracking)
@@ -116,17 +116,17 @@ Security and GA hardening checklist for production launch.
 
 ```
 Total TypeScript/TSX:     ~2,500 lines of code
-├── SDK:                    350 LOC
-├── Storage:                250 LOC
-├── Server:                 200 LOC
-└── Web Dashboard:        1,700 LOC
+â”œâ”€â”€ SDK:                    350 LOC
+â”œâ”€â”€ Storage:                250 LOC
+â”œâ”€â”€ Server:                 200 LOC
+â””â”€â”€ Web Dashboard:        1,700 LOC
 
 Documentation:           ~1,500 lines
-├── README.md:              250 lines
-├── BUILD_SUMMARY.md:       350 lines
-├── DEPLOYMENT.md:          400 lines
-├── EXAMPLE.md:             250 lines
-└── QUICKSTART.md:          250 lines
+â”œâ”€â”€ README.md:              250 lines
+â”œâ”€â”€ BUILD_SUMMARY.md:       350 lines
+â”œâ”€â”€ DEPLOYMENT.md:          400 lines
+â”œâ”€â”€ EXAMPLE.md:             250 lines
+â””â”€â”€ QUICKSTART.md:          250 lines
 
 Total Files:               35+ TypeScript/config files
 ```
@@ -142,13 +142,13 @@ Total Files:               35+ TypeScript/config files
 
 ## Ready For
 
-✅ Local development (npm run dev)  
-✅ npm package publication (@flamegraph/sdk)  
-✅ Docker containerization  
-✅ Railway/Fly.io deployment  
-✅ PostgreSQL migration  
-✅ Clerk + Stripe integration  
-✅ Team collaboration  
+âœ… Local development (npm run dev)  
+âœ… npm package publication (flamegraph-sdk)  
+âœ… Docker containerization  
+âœ… Railway/Fly.io deployment  
+âœ… PostgreSQL migration  
+âœ… Clerk + Stripe integration  
+âœ… Team collaboration  
 
 ## Production Checklist (Next Steps)
 
@@ -175,3 +175,4 @@ Total Files:               35+ TypeScript/config files
 ---
 
 **Status: Hardening in progress. Use this checklist as a release gate before GA.**
+

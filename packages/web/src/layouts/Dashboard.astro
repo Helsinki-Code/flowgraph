@@ -355,6 +355,13 @@ const { title, description } = Astro.props;
           </svg>
           <span class="nav-label">Settings</span>
         </a>
+        <a href="/app/budgets" class={Astro.url.pathname === "/app/budgets" ? "active" : ""}>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3h18v18H3z"></path>
+            <path d="M7 15l3-3 2 2 5-5"></path>
+          </svg>
+          <span class="nav-label">Budgets</span>
+        </a>
       </nav>
       <div class="sidebar-bottom">
         <UserButton />

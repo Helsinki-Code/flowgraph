@@ -1,7 +1,7 @@
-# Token Flame Graph — Complete Build Summary
+# Token Flame Graph â€” Complete Build Summary
 
 **Date:** April 2026  
-**Status:** ✅ End-to-end implementation complete  
+**Status:** âœ… End-to-end implementation complete  
 **Lines of Code:** ~2,500 (SDK + Server + Web)
 
 ---
@@ -12,19 +12,19 @@ A **production-ready SaaS** for profiling AI agent sessions. Drop-in instrumenta
 
 ### The Three-Part Stack
 
-1. **@flamegraph/sdk** (350 LOC) — Instrumentation wrapper
+1. **flamegraph-sdk** (350 LOC) â€” Instrumentation wrapper
    - Zero-config, drop-in `instrumentAgent(agent, options)`
    - Hooks into `Agent.subscribe()` and `transformContext`
    - Captures: LLM calls, tool executions, context building, sessions
    - No modifications to pi-mono required
 
-2. **@flamegraph/storage** (250 LOC) — Data layer
+2. **@flamegraph/storage** (250 LOC) â€” Data layer
    - SQLite adapter for development
    - PostgreSQL adapter (schema included) for production
    - Cost breakdown queries + loop detection
    - Multi-tenant workspace isolation
 
-3. **Full-Stack SaaS** (1,900 LOC) — API + Dashboard
+3. **Full-Stack SaaS** (1,900 LOC) â€” API + Dashboard
    - Fastify API server (REST, JSON, 5 main routes)
    - Astro web dashboard (SSR, dark theme, responsive)
    - D3 flame graph visualization
@@ -38,10 +38,10 @@ A **production-ready SaaS** for profiling AI agent sessions. Drop-in instrumenta
 
 | Source | % of Waste |
 |--------|-----------|
-| File reading & search | 35–45% |
-| Tool output bloat | 15–25% |
-| Context re-sending | 15–20% |
-| Actual productivity | 5–15% |
+| File reading & search | 35â€“45% |
+| Tool output bloat | 15â€“25% |
+| Context re-sending | 15â€“20% |
+| Actual productivity | 5â€“15% |
 
 **Token Flame Graph makes the waste visible at the call level.**
 
@@ -69,7 +69,7 @@ A **production-ready SaaS** for profiling AI agent sessions. Drop-in instrumenta
 | File | Purpose |
 |------|---------|
 | `index.ts` | Fastify server: routes, middleware, error handling |
-| `flamegraph/builder.ts` | buildFlameTree(): flat events → tree structure for D3 |
+| `flamegraph/builder.ts` | buildFlameTree(): flat events â†’ tree structure for D3 |
 
 ### Web (`packages/web/src/`)
 | File | Purpose |
@@ -89,23 +89,23 @@ A **production-ready SaaS** for profiling AI agent sessions. Drop-in instrumenta
 
 ```
 POST   /v1/events
-       → SDK sends NDJSON batch of FlamegraphEvents
-       → Response: { ok: true, count: N }
+       â†’ SDK sends NDJSON batch of FlamegraphEvents
+       â†’ Response: { ok: true, count: N }
 
 GET    /v1/sessions?workspace_id=X&limit=100&offset=0
-       → Returns: { sessions: Session[] }
+       â†’ Returns: { sessions: Session[] }
 
 GET    /v1/sessions/:id
-       → Returns: { session: Session, events: QueryEvent[] }
+       â†’ Returns: { session: Session, events: QueryEvent[] }
 
 GET    /v1/sessions/:id/flamegraph
-       → Returns: { tree: FlameNode, metrics: { totalCost, totalTokens, maxDepth, nodeCount } }
+       â†’ Returns: { tree: FlameNode, metrics: { totalCost, totalTokens, maxDepth, nodeCount } }
 
 GET    /v1/cost/breakdown?workspace_id=X&group_by=tool|model|feature|engineer
-       → Returns: { breakdown: { "tool_name": { cost, tokens, count } } }
+       â†’ Returns: { breakdown: { "tool_name": { cost, tokens, count } } }
 
 GET    /health
-       → Returns: { ok: true }
+       â†’ Returns: { ok: true }
 ```
 
 All routes are stateless and ready for horizontal scaling.
@@ -200,9 +200,9 @@ const wrappedStream = instrumentStream(streamFn, collector, workspaceId);
 - Server-side aggregation: any field can be a grouping dimension
 
 **Example queries:**
-- "How much did engineer Alice spend in March?" → filter engineerId, aggregate costUsd
-- "Which feature is most expensive?" → group_by feature
-- "Did PR #789 increase costs?" → filter prNumber, compare with baseline
+- "How much did engineer Alice spend in March?" â†’ filter engineerId, aggregate costUsd
+- "Which feature is most expensive?" â†’ group_by feature
+- "Did PR #789 increase costs?" â†’ filter prNumber, compare with baseline
 
 **Monetization tie-in:**
 - Usage: $X per session or per 1M tokens
@@ -218,7 +218,7 @@ const wrappedStream = instrumentStream(streamFn, collector, workspaceId);
 ```typescript
 function detectLoops(sessionId: string): string[] {
   // Group tool executions by consecutive calls
-  // If tool_name repeats 3+ times → mark as looped
+  // If tool_name repeats 3+ times â†’ mark as looped
   // Return list of affected tool names
 }
 ```
@@ -239,8 +239,8 @@ function detectLoops(sessionId: string): string[] {
 
 **What you see:**
 - Each row = one depth level in the call tree
-- Each rectangle = one event (session → turn → llm_call/tool_exec)
-- Width = (duration × some scale factor) to maintain readability
+- Each rectangle = one event (session â†’ turn â†’ llm_call/tool_exec)
+- Width = (duration Ã— some scale factor) to maintain readability
 - Height = 24px per row
 - Color: blue=llm_call, orange=tool_exec, green=context_build, red=looped
 - Hover: tooltip with name, cost, tokens, duration, % of total
@@ -257,18 +257,18 @@ function detectLoops(sessionId: string): string[] {
 ## Database Schema Decisions
 
 **Single `events` table with type discriminator (`kind` column):**
-- ✅ Simple queries: `WHERE kind = 'llm_call'`
-- ✅ Easy to add new event types
-- ✅ No joins needed for 95% of queries
-- ✅ Works in both SQLite and PostgreSQL
+- âœ… Simple queries: `WHERE kind = 'llm_call'`
+- âœ… Easy to add new event types
+- âœ… No joins needed for 95% of queries
+- âœ… Works in both SQLite and PostgreSQL
 
 **No normalized `llm_calls` / `tool_execs` tables:**
-- ✅ Simpler schema
-- ✗ Some NULL columns (but acceptable)
+- âœ… Simpler schema
+- âœ— Some NULL columns (but acceptable)
 
 **Indexes on: session_id, workspace_id, kind, tool_name:**
-- ✅ Fast filtering
-- ✅ Fast cost breakdowns
+- âœ… Fast filtering
+- âœ… Fast cost breakdowns
 
 ---
 
@@ -290,9 +290,9 @@ function detectLoops(sessionId: string): string[] {
 
 | Plan | Cost | Sessions/mo | Retention | Alerts | Team Members |
 |------|------|------------|-----------|--------|--------------|
-| Free | $0 | 100 | 7 days | ✗ | 1 |
-| Pro | $49 | 5,000 | 90 days | ✓ | 5 |
-| Business | $299 | ∞ | 365 days | ✓ | ∞ |
+| Free | $0 | 100 | 7 days | âœ— | 1 |
+| Pro | $49 | 5,000 | 90 days | âœ“ | 5 |
+| Business | $299 | âˆž | 365 days | âœ“ | âˆž |
 
 **Enforcement:** Check `workspace.plan` against `sessions_this_month` on every ingest.
 
@@ -305,28 +305,28 @@ function detectLoops(sessionId: string): string[] {
 
 ## Next Steps to MVP
 
-1. ✅ Core SDK + Storage + Server (done)
-2. ✅ Web dashboard (done)
-3. ⏳ Test with real pi-agent session (need to install @mariozechner packages)
-4. ⏳ Clerk authentication (scaffold exists)
-5. ⏳ Stripe billing (schema ready, routes need implementation)
-6. ⏳ Deploy to Railway (test environment)
-7. ⏳ Public landing page
-8. ⏳ npm publish
+1. âœ… Core SDK + Storage + Server (done)
+2. âœ… Web dashboard (done)
+3. â³ Test with real pi-agent session (need to install @mariozechner packages)
+4. â³ Clerk authentication (scaffold exists)
+5. â³ Stripe billing (schema ready, routes need implementation)
+6. â³ Deploy to Railway (test environment)
+7. â³ Public landing page
+8. â³ npm publish
 
-**MVP launch:** 1–2 weeks (most code is done; just need auth + billing).
+**MVP launch:** 1â€“2 weeks (most code is done; just need auth + billing).
 
 ---
 
 ## Files NOT in This Repo (Future)
 
-- `/packages/web/src/pages/auth/` — Clerk login/signup/org management
-- `/packages/server/src/routes/billing.ts` — Stripe webhook handling
-- `/packages/server/src/middleware/auth.ts` — JWT verification
-- `/packages/server/src/middleware/tenant.ts` — Workspace isolation
-- `docker-compose.yml` — Local PostgreSQL + Redis setup
-- `.github/workflows/` — CI/CD (build, test, deploy)
-- `/landing` — Marketing site (separate Astro project)
+- `/packages/web/src/pages/auth/` â€” Clerk login/signup/org management
+- `/packages/server/src/routes/billing.ts` â€” Stripe webhook handling
+- `/packages/server/src/middleware/auth.ts` â€” JWT verification
+- `/packages/server/src/middleware/tenant.ts` â€” Workspace isolation
+- `docker-compose.yml` â€” Local PostgreSQL + Redis setup
+- `.github/workflows/` â€” CI/CD (build, test, deploy)
+- `/landing` â€” Marketing site (separate Astro project)
 
 ---
 
@@ -353,7 +353,7 @@ function detectLoops(sessionId: string): string[] {
 1. **Adoption:**
    - SDK downloads per month
    - New workspace signups
-   - Free → Pro conversion rate
+   - Free â†’ Pro conversion rate
 
 2. **Usage:**
    - Sessions ingested per day
@@ -374,12 +374,12 @@ function detectLoops(sessionId: string): string[] {
 
 ## Known Limitations
 
-1. **No time-based alerts yet** — Only threshold-based (cost > $X)
-2. **D3 graph not interactive** — No zoom, no drag-to-select (future)
-3. **No multi-agent sessions** — Assumes one Agent per session
-4. **No custom tool namespacing** — tool_name is global
-5. **No session branching** (unlike pi-agent itself) — Record-only, not exploratory
-6. **No dark mode toggle** — Always dark (intentional for dev tools)
+1. **No time-based alerts yet** â€” Only threshold-based (cost > $X)
+2. **D3 graph not interactive** â€” No zoom, no drag-to-select (future)
+3. **No multi-agent sessions** â€” Assumes one Agent per session
+4. **No custom tool namespacing** â€” tool_name is global
+5. **No session branching** (unlike pi-agent itself) â€” Record-only, not exploratory
+6. **No dark mode toggle** â€” Always dark (intentional for dev tools)
 
 ---
 
@@ -388,7 +388,7 @@ function detectLoops(sessionId: string): string[] {
 1. **Real pain:** 70% of tokens wasted, nobody can see where
 2. **Real solution:** Drop-in SDK, see costs instantly
 3. **Team insights:** Attribution by engineer, PR, feature
-4. **Viral loop:** Developers see high costs → show managers → budgets increase → more adoption
+4. **Viral loop:** Developers see high costs â†’ show managers â†’ budgets increase â†’ more adoption
 5. **Developer-friendly:** Open source, npm package, type-safe
 6. **SaaS-friendly:** Team accounts, Stripe billing, usage-based pricing
 
@@ -398,16 +398,17 @@ function detectLoops(sessionId: string): string[] {
 
 ## Deployment Ready
 
-- ✅ Fastify server runs on Node 20+
-- ✅ Astro builds SSR
-- ✅ SDK publishes to npm
-- ✅ Database schema supports both SQLite (dev) and PostgreSQL (prod)
-- ✅ Environment variables are documented
-- ✅ CORS is configurable
-- ✅ Health check endpoint included
+- âœ… Fastify server runs on Node 20+
+- âœ… Astro builds SSR
+- âœ… SDK publishes to npm
+- âœ… Database schema supports both SQLite (dev) and PostgreSQL (prod)
+- âœ… Environment variables are documented
+- âœ… CORS is configurable
+- âœ… Health check endpoint included
 
 **Next: Run `npm install && npm test` to verify everything works.**
 
 ---
 
-**Built with ❤️ on top of pi-mono. No modifications to pi-mono source code.**
+**Built with â¤ï¸ on top of pi-mono. No modifications to pi-mono source code.**
+

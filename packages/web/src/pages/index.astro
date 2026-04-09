@@ -706,23 +706,23 @@ import Public from "../layouts/Public.astro";
   <div class="container">
     <!-- Announcement Banner -->
     <div class="announcement">
-      🔥 <span>Now in public beta</span> — Sign up free, no credit card required
+      ðŸ”¥ <span>Now in public beta</span> â€” Sign up free, no credit card required
     </div>
 
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-glow"></div>
       <div class="hero-content">
-        <div class="beta-badge">🔥 Public Beta · Free to start</div>
+        <div class="beta-badge">ðŸ”¥ Public Beta Â· Free to start</div>
         <h1 class="hero-title">See exactly where your AI agent burns tokens</h1>
         <p class="hero-subtitle">
-          Token Flame Graph gives you real-time flame graphs for every AI agent session — identify runaway loops, wasted context, and cost spikes before they wreck your bill.
+          Token Flame Graph gives you real-time flame graphs for every AI agent session â€” identify runaway loops, wasted context, and cost spikes before they wreck your bill.
         </p>
         <div class="hero-ctas">
-          <a href="/sign-up" class="btn btn-primary btn-lg">Get Started Free →</a>
-          <a href="#features" class="btn btn-ghost btn-lg">See how it works ↓</a>
+          <a href="/sign-up" class="btn btn-primary btn-lg">Get Started Free â†’</a>
+          <a href="#features" class="btn btn-ghost btn-lg">See how it works â†“</a>
         </div>
-        <div class="micro-copy">Free for 10K spans/day · No credit card required</div>
+        <div class="micro-copy">Free for 10K spans/day Â· No credit card required</div>
 
         <!-- Hero Flame Graph Visualization -->
         <div class="hero-visual">
@@ -735,7 +735,7 @@ import Public from "../layouts/Public.astro";
             <div class="flame-bar" style="height: 45%;"></div>
             <div class="flame-bar tool" style="height: 90%;"></div>
             <div class="flame-bar loop" style="height: 100%; box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);">
-              <div class="loop-badge">🔴 LOOP DETECTED</div>
+              <div class="loop-badge">ðŸ”´ LOOP DETECTED</div>
             </div>
             <div class="flame-bar" style="height: 40%;"></div>
           </div>
@@ -784,7 +784,7 @@ import Public from "../layouts/Public.astro";
           <p>of token spend is wasted on retries, excess context, and bad prompts</p>
         </div>
         <div class="problem-card">
-          <div class="problem-stat">∞</div>
+          <div class="problem-stat">âˆž</div>
           <h3>No Visibility</h3>
           <p>runaway tool call loops with no automatic detection or alerts</p>
         </div>
@@ -855,7 +855,7 @@ import Public from "../layouts/Public.astro";
           <div class="code-path">agent.js</div>
         </div>
         <div class="code-block">
-          <code>{`import { LocalCollector } from "@flamegraph/sdk";
+          <code>{`import { LocalCollector } from "flamegraph-sdk";
 
 const collector = new LocalCollector({
   serverUrl: process.env.FLAMEGRAPH_URL,
@@ -887,11 +887,11 @@ instrumentAgent(agent, { collector });`}</code>
           <p class="pricing-desc">Get started with unlimited sessions</p>
           <div class="pricing-amount"><span id="free-price">$0</span><span>/month</span></div>
           <ul class="pricing-list">
-            <li>✓ Unlimited sessions</li>
-            <li>✓ Real-time flame graphs</li>
-            <li>✓ Loop detection</li>
-            <li>✓ 7-day retention</li>
-            <li>✓ 1 seat</li>
+            <li>âœ“ Unlimited sessions</li>
+            <li>âœ“ Real-time flame graphs</li>
+            <li>âœ“ Loop detection</li>
+            <li>âœ“ 7-day retention</li>
+            <li>âœ“ 1 seat</li>
           </ul>
           <a href="/sign-up" class="pricing-cta">Get Started</a>
         </div>
@@ -903,11 +903,11 @@ instrumentAgent(agent, { collector });`}</code>
           <p class="pricing-desc">For growing teams</p>
           <div class="pricing-amount"><span id="pro-price">$49</span><span>/month</span></div>
           <ul class="pricing-list">
-            <li>✓ 10k spans/month</li>
-            <li>✓ Advanced cost attribution</li>
-            <li>✓ Custom alerts & webhooks</li>
-            <li>✓ 30-day retention</li>
-            <li>✓ 5 seats</li>
+            <li>âœ“ 10k spans/month</li>
+            <li>âœ“ Advanced cost attribution</li>
+            <li>âœ“ Custom alerts & webhooks</li>
+            <li>âœ“ 30-day retention</li>
+            <li>âœ“ 5 seats</li>
           </ul>
           <a href="/sign-up" class="pricing-cta primary">Start Free Trial</a>
         </div>
@@ -918,11 +918,11 @@ instrumentAgent(agent, { collector });`}</code>
           <p class="pricing-desc">For enterprises</p>
           <div class="pricing-amount"><span id="business-price">$299</span><span>/month</span></div>
           <ul class="pricing-list">
-            <li>✓ Unlimited spans</li>
-            <li>✓ Team workspaces</li>
-            <li>✓ Webhook alerts</li>
-            <li>✓ 90-day retention</li>
-            <li>✓ Unlimited seats</li>
+            <li>âœ“ Unlimited spans</li>
+            <li>âœ“ Team workspaces</li>
+            <li>âœ“ Webhook alerts</li>
+            <li>âœ“ 90-day retention</li>
+            <li>âœ“ Unlimited seats</li>
           </ul>
           <a href="/sign-up" class="pricing-cta">Contact Sales</a>
         </div>
@@ -962,7 +962,7 @@ instrumentAgent(agent, { collector });`}</code>
       <h2 class="cta-headline">Stop guessing where your tokens go</h2>
       <p class="cta-micro" style="margin-bottom: var(--spacing-lg);">Real visibility starts right now</p>
       <a href="/sign-up" class="cta-btn">Get Started Free</a>
-      <p class="cta-micro">Free · No credit card · Ships in 5 minutes</p>
+      <p class="cta-micro">Free Â· No credit card Â· Ships in 5 minutes</p>
     </section>
   </div>
 
@@ -996,3 +996,4 @@ instrumentAgent(agent, { collector });`}</code>
     });
   </script>
 </Public>
+

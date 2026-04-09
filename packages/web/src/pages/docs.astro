@@ -179,7 +179,7 @@ import Public from "../layouts/Public.astro";
       <h2>Installation</h2>
       <p>Install the Flame Graph SDK from npm:</p>
       <div class="docs-code shell">
-        <code>npm install @flamegraph/sdk</code>
+        <code>npm install flamegraph-sdk</code>
       </div>
     </section>
 
@@ -188,8 +188,8 @@ import Public from "../layouts/Public.astro";
       <h2>Quick Start</h2>
       <p>Wrap your agent with instrumentation in 3 lines:</p>
       <div class="docs-code">
-        <code>{`import { instrumentAgent } from "@flamegraph/sdk";
-import { LocalCollector } from "@flamegraph/sdk";
+        <code>{`import { instrumentAgent } from "flamegraph-sdk";
+import { LocalCollector } from "flamegraph-sdk";
 
 // Create collector that posts to Flame Graph server
 const collector = new LocalCollector({
@@ -240,7 +240,7 @@ await agent.run("What's the weather?");`}</code>
       <h2>Getting Your API Key</h2>
       <ol class="docs-list numbered">
         <li>Sign in to your Flame Graph dashboard</li>
-        <li>Go to Settings → API Keys</li>
+        <li>Go to Settings â†’ API Keys</li>
         <li>Click "Generate New Key" and copy it</li>
         <li>Pass it to LocalCollector as <code>apiKey</code></li>
       </ol>
@@ -253,7 +253,7 @@ await agent.run("What's the weather?");`}</code>
       <h3>With a pi-agent core agent</h3>
       <div class="docs-code">
         <code>{`import { createAgent } from "pi-agent-core";
-import { instrumentAgent, LocalCollector } from "@flamegraph/sdk";
+import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
 
 const agent = createAgent({...});
 
@@ -308,3 +308,4 @@ await agent.run("Research competitors...");`}</code>
     });
   </script>
 </Public>
+

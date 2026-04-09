@@ -1,7 +1,7 @@
 {
   "name": "token-flamegraph",
   "version": "0.1.0",
-  "description": "CPU profiler for AI agent sessions — visualize where tokens burn",
+  "description": "CPU profiler for AI agent sessions â€” visualize where tokens burn",
   "private": true,
   "type": "module",
   "engines": {
@@ -36,10 +36,11 @@
   },
   "dependencies": {
     "@astrojs/node": "^10.0.4",
-    "@flamegraph/sdk": "*",
+    "flamegraph-sdk": "*",
     "astro": "^6.1.5",
     "emoji-regex-xs": "^2.0.1",
     "nanostores": "^1.2.0",
     "ulid": "^2.3.0"
   }
 }
+

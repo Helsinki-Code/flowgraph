@@ -6,6 +6,53 @@ type Agent = any;
 type AgentEvent = any;
 type AssistantMessage = any;
 
+function stableString(input: unknown): string {
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return String(input ?? "");
+  }
+}
+
+function tinyHash(input: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return `h${(hash >>> 0).toString(16)}`;
+}
+
+function extractContextAnatomyFromMessage(msg: AssistantMessage): Record<string, unknown> | undefined {
+  const usage = msg?.usage;
+  if (!usage) return undefined;
+
+  const candidates = [
+    msg?.contextAnatomy,
+    msg?.context_anatomy,
+    msg?.metadata?.contextAnatomy,
+    msg?.metadata?.context_anatomy,
+  ];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
+      return candidate as Record<string, unknown>;
+    }
+  }
+
+  // Fallback heuristic based on prompt usage tokens
+  const input = Number(usage.input || 0);
+  if (!Number.isFinite(input) || input <= 0) return undefined;
+  return {
+    systemPromptTokens: Math.round(input * 0.14),
+    historyTokens: Math.round(input * 0.46),
+    toolResultTokens: Math.round(input * 0.22),
+    currentTurnTokens: Math.max(
+      0,
+      input - Math.round(input * 0.14) - Math.round(input * 0.46) - Math.round(input * 0.22),
+    ),
+  };
+}
+
 /**
  * instrumentAgent() — main entry point
  * Wraps a pi-agent Agent with flamegraph instrumentation
@@ -39,6 +86,10 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
 
       if (event.type === "message_end") {
         const msg = event.message as AssistantMessage;
+        const promptMaterial = stableString(
+          msg?.request || msg?.prompt || msg?.messages || msg?.input || msg?.metadata?.prompt,
+        );
+        const contextAnatomy = extractContextAnatomyFromMessage(msg);
 
         // Record LLM call with full usage data
         if (msg.usage && agent.sessionId && msg.model && msg.provider) {
@@ -53,6 +104,11 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
             costUsd: msg.usage.cost.total,
             stopReason: (msg.stopReason || "stop") as "stop" | "length" | "toolUse" | "error" | "aborted",
             endedAt: now,
+            metadata: {
+              ...(options.agentId ? { agentId: options.agentId } : {}),
+              promptSignature: tinyHash(promptMaterial),
+              ...(contextAnatomy ? { contextAnatomy } : {}),
+            },
           });
         }
       }
@@ -66,6 +122,9 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
             toolName: event.toolName,
             inputBytes: JSON.stringify(event.args).length,
             startedAt: now,
+            metadata: {
+              ...(options.agentId ? { agentId: options.agentId } : {}),
+            },
           });
         }
       }
@@ -107,12 +166,26 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
       : messages;
 
     if (agent.sessionId && sessionStarted) {
+      const roleCounts = Array.isArray(result)
+        ? result.reduce(
+            (acc: Record<string, number>, item: any) => {
+              const role = typeof item?.role === "string" ? item.role : "unknown";
+              acc[role] = (acc[role] || 0) + 1;
+              return acc;
+            },
+            {},
+          )
+        : {};
       collector.recordContextBuild({
         sessionId: agent.sessionId,
         messageCount: result.length,
         estimatedTokens: estimateTokens(result),
         durationMs: Date.now() - before,
         endedAt: Date.now(),
+        metadata: {
+          ...(options.agentId ? { agentId: options.agentId } : {}),
+          roleCounts,
+        },
       });
     }
 

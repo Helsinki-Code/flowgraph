@@ -3,9 +3,9 @@
 ## Overview
 
 Token Flame Graph is a full-stack SaaS with three components:
-- **API Server** — Fastify, handles event ingestion and queries
-- **Web Dashboard** — Astro, SSR dashboard
-- **SDK** — npm package, deployed to npm registry
+- **API Server** â€” Fastify, handles event ingestion and queries
+- **Web Dashboard** â€” Astro, SSR dashboard
+- **SDK** â€” npm package, deployed to npm registry
 
 ## Prerequisites
 
@@ -193,16 +193,16 @@ NODE_ENV=production node ./packages/web/dist/server/entry.mjs
    npm publish --workspace=packages/sdk
    ```
 
-The package will be available as `@flamegraph/sdk` on npm.
+The package will be available as `flamegraph-sdk` on npm.
 
 ## Step 5: Set Up Stripe (Optional)
 
 ### Create Products
 
-1. Go to Stripe Dashboard → Products
+1. Go to Stripe Dashboard â†’ Products
 2. Create products:
-   - **Pro** — $49/month
-   - **Business** — $299/month
+   - **Pro** â€” $49/month
+   - **Business** â€” $299/month
 3. Copy price IDs to your environment:
    ```env
    STRIPE_PRO_PRICE_ID=price_xxx
@@ -222,7 +222,7 @@ The package will be available as `@flamegraph/sdk` on npm.
 
 ### Create Application
 
-1. Go to Clerk Dashboard → Applications
+1. Go to Clerk Dashboard â†’ Applications
 2. Create a new application
 3. Copy keys:
    ```env
@@ -358,12 +358,13 @@ jobs:
 
 As you grow:
 
-1. **Database** — Switch from SQLite to PostgreSQL (done in this guide)
-2. **Caching** — Add Redis for session cache
-3. **File Storage** — Move event export to S3/GCS
-4. **Workers** — Use Bull/BullMQ for async jobs (alerts, exports)
-5. **CDN** — Put Vercel/Cloudflare in front of API
+1. **Database** â€” Switch from SQLite to PostgreSQL (done in this guide)
+2. **Caching** â€” Add Redis for session cache
+3. **File Storage** â€” Move event export to S3/GCS
+4. **Workers** â€” Use Bull/BullMQ for async jobs (alerts, exports)
+5. **CDN** â€” Put Vercel/Cloudflare in front of API
 
 ---
 
 Questions? Check the [main README](./README.md) or open an issue.
+

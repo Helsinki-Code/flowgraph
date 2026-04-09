@@ -2,9 +2,17 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import crypto from "crypto";
 import { buildFlameTree, computeTreeMetrics } from "./flamegraph/builder.js";
-import type { QueryEvent, QuerySession } from "@flamegraph/storage";
+import type { QueryBudget, QueryEvent, QuerySession } from "@flamegraph/storage";
 import { TursoStore } from "@flamegraph/storage";
 import { createClerkAuthMiddleware } from "./middleware/auth.js";
+import {
+  buildContextAnatomy,
+  buildSessionDiff,
+  buildTopology,
+  buildWastedTokenReport,
+  extractAgentId,
+  getEventTokenCount,
+} from "./analytics/session-intelligence.js";
 
 type GroupBy = "tool" | "model" | "feature" | "engineer";
 
@@ -149,6 +157,50 @@ function toQueryEvent(event: any, workspaceId: string): QueryEvent {
   };
 }
 
+type BudgetMetric = "cost_usd" | "tokens";
+type BudgetScope = "session" | "agent" | "call";
+
+function metricFromEvent(event: any, metric: BudgetMetric): number {
+  if (metric === "cost_usd") return Number(event.costUsd || 0);
+  const input = Number(event.inputTokens || 0);
+  const output = Number(event.outputTokens || 0);
+  const cacheRead = Number(event.cacheReadTokens || 0);
+  const cacheWrite = Number(event.cacheWriteTokens || 0);
+  return input + output + cacheRead + cacheWrite;
+}
+
+function parseEventMetadata(raw: any): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as Record<string, unknown>;
+}
+
+function ingestEventAgentId(event: any): string {
+  const metadata = parseEventMetadata(event.metadata);
+  const candidate =
+    metadata.agentId ||
+    metadata.agent_id ||
+    metadata.agent ||
+    metadata.actor ||
+    event.projectId ||
+    event.engineerId ||
+    event.feature ||
+    "primary";
+  if (typeof candidate === "string" && candidate.trim() !== "") {
+    return candidate.trim();
+  }
+  return "primary";
+}
+
+function budgetTargetMatches(budget: QueryBudget, event: any, sessionId: string, agentId: string): boolean {
+  if (!budget.target || budget.target.trim() === "") return true;
+  if (budget.scope === "session") return budget.target === sessionId;
+  if (budget.scope === "agent") return budget.target === agentId;
+  if (budget.scope === "call") {
+    return budget.target === event.model || budget.target === event.toolName || budget.target === agentId;
+  }
+  return false;
+}
+
 // Register plugins
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 await app.register(cors, {
@@ -242,6 +294,9 @@ app.post<{ Body: any[]; Headers: { "idempotency-key"?: string } }>(
 
       const events = request.body || [];
       const touchedSessionIds = new Set<string>();
+      const enabledBudgets = await store.listBudgets(workspaceId, true);
+      const sessionIncoming = new Map<string, { cost: number; tokens: number }>();
+      const agentIncomingBySession = new Map<string, Map<string, { cost: number; tokens: number }>>();
 
       for (const event of events) {
         if (event.workspaceId !== workspaceId) {
@@ -265,8 +320,157 @@ app.post<{ Body: any[]; Headers: { "idempotency-key"?: string } }>(
           return;
         }
 
+        const sessionId = event.sessionId as string;
+        touchedSessionIds.add(sessionId);
+        if (!sessionIncoming.has(sessionId)) {
+          sessionIncoming.set(sessionId, { cost: 0, tokens: 0 });
+        }
+        const sessionTotals = sessionIncoming.get(sessionId)!;
+        sessionTotals.cost += metricFromEvent(event, "cost_usd");
+        sessionTotals.tokens += metricFromEvent(event, "tokens");
+
+        if (!agentIncomingBySession.has(sessionId)) {
+          agentIncomingBySession.set(sessionId, new Map());
+        }
+        const incomingByAgent = agentIncomingBySession.get(sessionId)!;
+        const agentId = ingestEventAgentId(event);
+        if (!incomingByAgent.has(agentId)) {
+          incomingByAgent.set(agentId, { cost: 0, tokens: 0 });
+        }
+        const agentMetrics = incomingByAgent.get(agentId)!;
+        agentMetrics.cost += metricFromEvent(event, "cost_usd");
+        agentMetrics.tokens += metricFromEvent(event, "tokens");
+
+        if (event.kind === "llm_call") {
+          for (const budget of enabledBudgets) {
+            if (budget.scope !== "call") continue;
+            if (!budgetTargetMatches(budget, event, sessionId, agentId)) continue;
+            const currentValue = metricFromEvent(event, budget.metric as BudgetMetric);
+            if (currentValue <= budget.limit_value) continue;
+            await store.recordBudgetViolation({
+              id: crypto.randomUUID(),
+              workspace_id: workspaceId,
+              budget_id: budget.id,
+              session_id: sessionId,
+              event_id: event.eventId,
+              scope: budget.scope,
+              target: budget.target || agentId,
+              metric: budget.metric,
+              current_value: currentValue,
+              limit_value: budget.limit_value,
+              action: budget.action,
+              details: JSON.stringify({
+                reason: "Per-call budget exceeded",
+                model: event.model,
+              }),
+            });
+            if (budget.action === "block") {
+              sendError(
+                request,
+                reply,
+                402,
+                "BUDGET_EXCEEDED",
+                `Call budget '${budget.name}' exceeded (${currentValue.toFixed(2)} > ${budget.limit_value}).`,
+              );
+              return;
+            }
+          }
+        }
+      }
+
+      for (const sessionId of touchedSessionIds) {
+        const existingSession = await store.getSessionForWorkspace(sessionId, workspaceId);
+        const incoming = sessionIncoming.get(sessionId) || { cost: 0, tokens: 0 };
+        const projectedCost = (existingSession?.total_cost_usd || 0) + incoming.cost;
+        const projectedTokens = (existingSession?.total_tokens || 0) + incoming.tokens;
+
+        for (const budget of enabledBudgets) {
+          if (budget.scope !== "session") continue;
+          if (budget.target && budget.target !== sessionId) continue;
+          const currentValue = budget.metric === "cost_usd" ? projectedCost : projectedTokens;
+          if (currentValue <= budget.limit_value) continue;
+          await store.recordBudgetViolation({
+            id: crypto.randomUUID(),
+            workspace_id: workspaceId,
+            budget_id: budget.id,
+            session_id: sessionId,
+            scope: budget.scope,
+            target: budget.target || sessionId,
+            metric: budget.metric,
+            current_value: currentValue,
+            limit_value: budget.limit_value,
+            action: budget.action,
+            details: JSON.stringify({
+              reason: "Session budget exceeded",
+              projectedCost,
+              projectedTokens,
+            }),
+          });
+          if (budget.action === "block") {
+            sendError(
+              request,
+              reply,
+              402,
+              "BUDGET_EXCEEDED",
+              `Session budget '${budget.name}' exceeded for session ${sessionId}.`,
+            );
+            return;
+          }
+        }
+      }
+
+      for (const sessionId of touchedSessionIds) {
+        const existingAgents = await store.getSessionAgentTotals(workspaceId, sessionId);
+        const incomingAgents = agentIncomingBySession.get(sessionId) || new Map();
+        const mergedAgentIds = new Set<string>([
+          ...Object.keys(existingAgents),
+          ...incomingAgents.keys(),
+        ]);
+        for (const agentId of mergedAgentIds) {
+          const existing = existingAgents[agentId] || { cost: 0, tokens: 0 };
+          const incoming = incomingAgents.get(agentId) || { cost: 0, tokens: 0 };
+          const projected = {
+            cost: existing.cost + incoming.cost,
+            tokens: existing.tokens + incoming.tokens,
+          };
+
+          for (const budget of enabledBudgets) {
+            if (budget.scope !== "agent") continue;
+            if (budget.target && budget.target !== agentId) continue;
+            const currentValue = budget.metric === "cost_usd" ? projected.cost : projected.tokens;
+            if (currentValue <= budget.limit_value) continue;
+            await store.recordBudgetViolation({
+              id: crypto.randomUUID(),
+              workspace_id: workspaceId,
+              budget_id: budget.id,
+              session_id: sessionId,
+              scope: budget.scope,
+              target: budget.target || agentId,
+              metric: budget.metric,
+              current_value: currentValue,
+              limit_value: budget.limit_value,
+              action: budget.action,
+              details: JSON.stringify({
+                reason: "Agent budget exceeded",
+                agentId,
+              }),
+            });
+            if (budget.action === "block") {
+              sendError(
+                request,
+                reply,
+                402,
+                "BUDGET_EXCEEDED",
+                `Agent budget '${budget.name}' exceeded for agent ${agentId}.`,
+              );
+              return;
+            }
+          }
+        }
+      }
+
+      for (const event of events) {
         if (event.kind === "session") {
-          touchedSessionIds.add(event.sessionId);
           await store.createWorkspace(workspaceId, "default");
           await store.insertSession({
             id: event.sessionId,
@@ -282,10 +486,9 @@ app.post<{ Body: any[]; Headers: { "idempotency-key"?: string } }>(
             turn_count: 0,
             loop_detected: 0,
           } as QuerySession);
-        } else {
-          touchedSessionIds.add(event.sessionId);
-          await store.insertEvent(toQueryEvent(event, workspaceId) as QueryEvent);
+          continue;
         }
+        await store.insertEvent(toQueryEvent(event, workspaceId) as QueryEvent);
       }
 
       for (const sessionId of touchedSessionIds) {
@@ -326,6 +529,59 @@ app.get<{ Querystring: { limit?: string; offset?: string } }>("/v1/sessions", as
   } catch (err) {
     app.log.error(err);
     sendError(request, reply, 500, "LIST_SESSIONS_FAILED", "Failed to list sessions.");
+  }
+});
+
+/**
+ * GET /v1/sessions/diff?base_session_id=...&target_session_id=...
+ * Compare two sessions and return regressions
+ */
+app.get<{
+  Querystring: { base_session_id?: string; target_session_id?: string };
+}>("/v1/sessions/diff", async (request, reply) => {
+  try {
+    if (!requireClerkAuth(request, reply)) return;
+    const workspaceId = requireWorkspace(request, reply);
+    if (!workspaceId) return;
+
+    const baseSessionId = request.query.base_session_id;
+    const targetSessionId = request.query.target_session_id;
+    if (!baseSessionId || !targetSessionId) {
+      sendError(
+        request,
+        reply,
+        400,
+        "INVALID_DIFF_REQUEST",
+        "base_session_id and target_session_id are required.",
+      );
+      return;
+    }
+
+    const [baseSession, targetSession] = await Promise.all([
+      store.getSessionForWorkspace(baseSessionId, workspaceId),
+      store.getSessionForWorkspace(targetSessionId, workspaceId),
+    ]);
+    if (!baseSession || !targetSession) {
+      sendError(
+        request,
+        reply,
+        404,
+        "SESSION_NOT_FOUND",
+        "One or both sessions were not found for this workspace.",
+      );
+      return;
+    }
+
+    const [baseEvents, targetEvents] = await Promise.all([
+      store.getSessionEventsForWorkspace(baseSession.id, workspaceId),
+      store.getSessionEventsForWorkspace(targetSession.id, workspaceId),
+    ]);
+
+    const diff = buildSessionDiff(baseSession, baseEvents, targetSession, targetEvents);
+    reply.send({ diff });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "SESSION_DIFF_FAILED", "Failed to compare sessions.");
   }
 });
 
@@ -377,6 +633,168 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/flamegraph", async (reques
   } catch (err) {
     app.log.error(err);
     sendError(request, reply, 500, "FLAMEGRAPH_BUILD_FAILED", "Failed to build flamegraph.");
+  }
+});
+
+/**
+ * GET /v1/sessions/:id/context-anatomy
+ * Phase 2: Context window anatomy for each LLM call
+ */
+app.get<{ Params: { id: string } }>("/v1/sessions/:id/context-anatomy", async (request, reply) => {
+  try {
+    if (!requireClerkAuth(request, reply)) return;
+    const workspaceId = requireWorkspace(request, reply);
+    if (!workspaceId) return;
+
+    const { id } = request.params;
+    const session = await store.getSessionForWorkspace(id, workspaceId);
+    if (!session) {
+      sendError(request, reply, 404, "SESSION_NOT_FOUND", "Session not found.");
+      return;
+    }
+    const events = await store.getSessionEventsForWorkspace(id, workspaceId);
+    const entries = buildContextAnatomy(events);
+    reply.send({ sessionId: id, entries });
+  } catch (err) {
+    app.log.error(err);
+    sendError(
+      request,
+      reply,
+      500,
+      "CONTEXT_ANATOMY_FAILED",
+      "Failed to compute context anatomy.",
+    );
+  }
+});
+
+/**
+ * GET /v1/sessions/:id/waste-report
+ * Phase 2: Wasted token report
+ */
+app.get<{ Params: { id: string } }>("/v1/sessions/:id/waste-report", async (request, reply) => {
+  try {
+    if (!requireClerkAuth(request, reply)) return;
+    const workspaceId = requireWorkspace(request, reply);
+    if (!workspaceId) return;
+
+    const { id } = request.params;
+    const session = await store.getSessionForWorkspace(id, workspaceId);
+    if (!session) {
+      sendError(request, reply, 404, "SESSION_NOT_FOUND", "Session not found.");
+      return;
+    }
+    const events = await store.getSessionEventsForWorkspace(id, workspaceId);
+    const report = buildWastedTokenReport(session, events);
+    reply.send({ sessionId: id, report });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "WASTE_REPORT_FAILED", "Failed to generate waste report.");
+  }
+});
+
+/**
+ * GET /v1/sessions/:id/topology
+ * Phase 3: Multi-agent topology + critical path
+ */
+app.get<{ Params: { id: string } }>("/v1/sessions/:id/topology", async (request, reply) => {
+  try {
+    if (!requireClerkAuth(request, reply)) return;
+    const workspaceId = requireWorkspace(request, reply);
+    if (!workspaceId) return;
+
+    const { id } = request.params;
+    const session = await store.getSessionForWorkspace(id, workspaceId);
+    if (!session) {
+      sendError(request, reply, 404, "SESSION_NOT_FOUND", "Session not found.");
+      return;
+    }
+    const events = await store.getSessionEventsForWorkspace(id, workspaceId);
+    const topology = buildTopology(events);
+    reply.send({ sessionId: id, topology });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "TOPOLOGY_FAILED", "Failed to build session topology.");
+  }
+});
+
+/**
+ * GET /v1/sessions/:id/live?cursor=<started_at_ms>&limit=200
+ * Phase 3: Incremental live trace feed (poll-based)
+ */
+app.get<{ Params: { id: string }; Querystring: { cursor?: string; limit?: string } }>(
+  "/v1/sessions/:id/live",
+  async (request, reply) => {
+    try {
+      if (!requireClerkAuth(request, reply)) return;
+      const workspaceId = requireWorkspace(request, reply);
+      if (!workspaceId) return;
+
+      const { id } = request.params;
+      const session = await store.getSessionForWorkspace(id, workspaceId);
+      if (!session) {
+        sendError(request, reply, 404, "SESSION_NOT_FOUND", "Session not found.");
+        return;
+      }
+
+      const cursor = Math.max(parsePositiveInt(request.query.cursor, 0), 0);
+      const limit = Math.min(parsePositiveInt(request.query.limit, 200), 1000);
+      const events = await store.getSessionEventsSince(id, workspaceId, cursor, limit);
+      const normalized = events.map((event) => ({
+        id: event.id,
+        parentId: event.parent_id,
+        kind: event.kind,
+        agentId: extractAgentId(event),
+        model: event.model,
+        toolName: event.tool_name,
+        startedAt: event.started_at,
+        endedAt: event.ended_at || event.started_at,
+        durationMs: Math.max(0, (event.ended_at || event.started_at) - event.started_at),
+        costUsd: event.cost_usd || 0,
+        tokens: getEventTokenCount(event),
+      }));
+      const nextCursor =
+        normalized.length > 0
+          ? Math.max(...normalized.map((event) => event.startedAt)) + 1
+          : cursor;
+      reply.send({
+        sessionId: id,
+        cursor: nextCursor,
+        isComplete: Boolean(session.ended_at),
+        events: normalized,
+      });
+    } catch (err) {
+      app.log.error(err);
+      sendError(request, reply, 500, "LIVE_TRACE_FAILED", "Failed to fetch live trace data.");
+    }
+  },
+);
+
+/**
+ * GET /v1/sessions/:id/budget-violations
+ */
+app.get<{ Params: { id: string } }>("/v1/sessions/:id/budget-violations", async (request, reply) => {
+  try {
+    if (!requireClerkAuth(request, reply)) return;
+    const workspaceId = requireWorkspace(request, reply);
+    if (!workspaceId) return;
+
+    const { id } = request.params;
+    const session = await store.getSessionForWorkspace(id, workspaceId);
+    if (!session) {
+      sendError(request, reply, 404, "SESSION_NOT_FOUND", "Session not found.");
+      return;
+    }
+    const violations = await store.listBudgetViolations(workspaceId, id, 100);
+    reply.send({ sessionId: id, violations });
+  } catch (err) {
+    app.log.error(err);
+    sendError(
+      request,
+      reply,
+      500,
+      "LIST_BUDGET_VIOLATIONS_FAILED",
+      "Failed to list budget violations.",
+    );
   }
 });
 
@@ -540,6 +958,100 @@ app.delete("/v1/workspace/api-keys/:keyId", async (request, reply) => {
   } catch (err) {
     app.log.error(err);
     sendError(request, reply, 500, "REVOKE_API_KEY_FAILED", "Failed to revoke API key.");
+  }
+});
+
+/**
+ * Budget policies (Phase 3)
+ */
+app.get("/v1/budgets", async (request, reply) => {
+  if (!requireClerkAuth(request, reply)) return;
+  const workspaceId = requireWorkspace(request, reply);
+  if (!workspaceId) return;
+
+  try {
+    const budgets = await store.listBudgets(workspaceId, false);
+    reply.send({ budgets });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "LIST_BUDGETS_FAILED", "Failed to list budgets.");
+  }
+});
+
+app.post("/v1/budgets", async (request, reply) => {
+  if (!requireClerkAuth(request, reply)) return;
+  const workspaceId = requireWorkspace(request, reply);
+  if (!workspaceId) return;
+
+  try {
+    const {
+      name,
+      scope,
+      metric,
+      target,
+      limitValue,
+      action,
+      enabled,
+    } = request.body as any;
+
+    const safeScope = scope as BudgetScope;
+    const safeMetric = metric as BudgetMetric;
+    const safeAction = (action as "warn" | "block" | undefined) || "warn";
+    const limit = Number(limitValue);
+    const scopes = new Set<BudgetScope>(["session", "agent", "call"]);
+    const metrics = new Set<BudgetMetric>(["cost_usd", "tokens"]);
+    const actions = new Set(["warn", "block"]);
+
+    if (!scopes.has(safeScope) || !metrics.has(safeMetric) || !actions.has(safeAction)) {
+      sendError(
+        request,
+        reply,
+        400,
+        "INVALID_BUDGET",
+        "scope, metric, or action is invalid.",
+      );
+      return;
+    }
+    if (!Number.isFinite(limit) || limit <= 0) {
+      sendError(request, reply, 400, "INVALID_BUDGET", "limitValue must be a positive number.");
+      return;
+    }
+
+    const budgetId = crypto.randomUUID();
+    await store.createBudget({
+      id: budgetId,
+      workspace_id: workspaceId,
+      name: String(name || `${safeScope} ${safeMetric} limit`),
+      scope: safeScope,
+      metric: safeMetric,
+      target: typeof target === "string" && target.trim() !== "" ? target.trim() : undefined,
+      limit_value: limit,
+      action: safeAction,
+      enabled: enabled === false ? 0 : 1,
+    });
+    reply.code(201).send({ id: budgetId });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "CREATE_BUDGET_FAILED", "Failed to create budget.");
+  }
+});
+
+app.delete("/v1/budgets/:budgetId", async (request, reply) => {
+  if (!requireClerkAuth(request, reply)) return;
+  const workspaceId = requireWorkspace(request, reply);
+  if (!workspaceId) return;
+
+  try {
+    const { budgetId } = request.params as any;
+    const removed = await store.deleteBudget(workspaceId, budgetId);
+    if (!removed) {
+      sendError(request, reply, 404, "BUDGET_NOT_FOUND", "Budget policy not found.");
+      return;
+    }
+    reply.send({ ok: true });
+  } catch (err) {
+    app.log.error(err);
+    sendError(request, reply, 500, "DELETE_BUDGET_FAILED", "Failed to delete budget.");
   }
 });
 

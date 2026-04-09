@@ -8,4 +8,7 @@ assert.match(source, /AUTH_API_KEY_REQUIRED/);
 assert.match(source, /idempotency-key/);
 assert.match(source, /getSessionForWorkspace/);
 assert.match(source, /recordIngestRequest/);
+assert.match(source, /\/v1\/sessions\/:id\/waste-report/);
+assert.match(source, /\/v1\/sessions\/:id\/topology/);
+assert.match(source, /\/v1\/budgets/);
 console.log("PASS: Server smoke checks");

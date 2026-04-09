@@ -1,4 +1,4 @@
-# Token Flame Graph — Quick Start
+# Token Flame Graph â€” Quick Start
 
 Get up and running in 5 minutes.
 
@@ -136,7 +136,7 @@ npm test --workspace=packages/sdk
 ## View the Dashboard
 
 1. Visit `http://localhost:3000` (web dev server)
-2. Reload page — should show empty sessions table (no data yet)
+2. Reload page â€” should show empty sessions table (no data yet)
 3. The server is listening on `http://localhost:3000` (API)
 
 ## Next Steps
@@ -187,15 +187,15 @@ npm test --workspace=packages/sdk -- --reporter=verbose
 
 ```
 token-flamegraph/
-├── packages/
-│   ├── sdk/        ← Drop-in instrumentation (npm package)
-│   ├── storage/    ← SQLite + PostgreSQL adapters
-│   ├── server/     ← Fastify API
-│   └── web/        ← Astro dashboard
-├── README.md
-├── EXAMPLE.md      ← How to integrate with pi-agent
-├── DEPLOYMENT.md   ← Production setup
-└── BUILD_SUMMARY.md ← Architecture deep-dive
+â”œâ”€â”€ packages/
+â”‚   â”œâ”€â”€ sdk/        â† Drop-in instrumentation (npm package)
+â”‚   â”œâ”€â”€ storage/    â† SQLite + PostgreSQL adapters
+â”‚   â”œâ”€â”€ server/     â† Fastify API
+â”‚   â””â”€â”€ web/        â† Astro dashboard
+â”œâ”€â”€ README.md
+â”œâ”€â”€ EXAMPLE.md      â† How to integrate with pi-agent
+â”œâ”€â”€ DEPLOYMENT.md   â† Production setup
+â””â”€â”€ BUILD_SUMMARY.md â† Architecture deep-dive
 ```
 
 ## Quick Reference
@@ -214,14 +214,14 @@ token-flamegraph/
 ### Create collector
 
 ```typescript
-import { LocalCollector } from "@flamegraph/sdk";
+import { LocalCollector } from "flamegraph-sdk";
 const collector = new LocalCollector({ autoFlushIntervalMs: 5000 });
 ```
 
 ### Instrument agent
 
 ```typescript
-import { instrumentAgent } from "@flamegraph/sdk";
+import { instrumentAgent } from "flamegraph-sdk";
 
 const unsubscribe = instrumentAgent(agent, {
   collector,
@@ -254,11 +254,12 @@ const totalTokens = events
 
 ## Need Help?
 
-- 📖 [README.md](./README.md) — Overview
-- 🚀 [EXAMPLE.md](./EXAMPLE.md) — Real integration examples
-- 🏗️ [BUILD_SUMMARY.md](./BUILD_SUMMARY.md) — Architecture & design decisions
-- 📦 [DEPLOYMENT.md](./DEPLOYMENT.md) — How to deploy
+- ðŸ“– [README.md](./README.md) â€” Overview
+- ðŸš€ [EXAMPLE.md](./EXAMPLE.md) â€” Real integration examples
+- ðŸ—ï¸ [BUILD_SUMMARY.md](./BUILD_SUMMARY.md) â€” Architecture & design decisions
+- ðŸ“¦ [DEPLOYMENT.md](./DEPLOYMENT.md) â€” How to deploy
 
 ---
 
-**Happy profiling! 🔥**
+**Happy profiling! ðŸ”¥**
+

@@ -1,0 +1,212 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../layouts/Dashboard.astro";
+import { API_URL } from "../../lib/api";
+import { fetchJsonWithTimeout } from "../../lib/server-fetch";
+
+let userId, token;
+try {
+  if (!Astro.locals?.auth) return Astro.redirect("/sign-in");
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  token = auth?.getToken ? await auth.getToken() : null;
+  if (!userId) return Astro.redirect("/sign-in");
+} catch (e) {
+  console.error("Auth error in /app/budgets:", e);
+  return Astro.redirect("/sign-in");
+}
+
+let budgets: any[] = [];
+let error: string | null = null;
+if (token) {
+  try {
+    const data = await fetchJsonWithTimeout<{ budgets: any[] }>(`${API_URL}/v1/budgets`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeoutMs: 8000,
+      retries: 1,
+    });
+    budgets = data.budgets || [];
+  } catch (e: any) {
+    error = `Failed to load budgets: ${e.message}`;
+  }
+}
+---
+
+<Dashboard title="Budgets" description="Enforce spend and token limits per session, agent, or call">
+  <style>
+    .error-banner {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background: #7f1d1d;
+      color: #fca5a5;
+      margin-bottom: 1.5rem;
+      border: 1px solid #991b1b;
+      font-size: 0.9rem;
+    }
+
+    .panel {
+      background: #111118;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.75rem;
+    }
+
+    input, select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.4rem;
+      color: #f8fafc;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 0.45rem;
+      padding: 0.7rem 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      background: #7f1d1d;
+      color: #fecaca;
+      font-weight: 600;
+    }
+
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+      border: 1px solid #1e293b;
+      background: #0b1220;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .meta {
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+  </style>
+
+  {error && <div class="error-banner">{error}</div>}
+
+  <div class="panel">
+    <h2>Create Budget Policy</h2>
+    <form id="budget-form" class="grid">
+      <input type="text" name="name" placeholder="Policy name (optional)" />
+      <select name="scope">
+        <option value="session">Session</option>
+        <option value="agent">Agent</option>
+        <option value="call">Call</option>
+      </select>
+      <select name="metric">
+        <option value="cost_usd">Cost (USD)</option>
+        <option value="tokens">Tokens</option>
+      </select>
+      <input type="text" name="target" placeholder="Target (session id, agent id, model) optional" />
+      <input type="number" step="0.0001" min="0.0001" name="limitValue" placeholder="Limit value" required />
+      <select name="action">
+        <option value="warn">Warn</option>
+        <option value="block">Block</option>
+      </select>
+      <button class="btn" type="submit">Save Policy</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Active Policies</h2>
+    {budgets.length === 0 ? (
+      <p style={{ color: "#94a3b8", fontSize: "0.92rem" }}>
+        No budget policies yet. Create one to enforce session, agent, or per-call limits.
+      </p>
+    ) : (
+      budgets.map((budget) => (
+        <div class="list-item">
+          <div>
+            <div style={{ fontWeight: "700", color: "#e2e8f0" }}>{budget.name}</div>
+            <div class="meta">
+              {budget.scope} • {budget.metric} • limit {budget.limit_value}
+              {budget.target ? ` • target=${budget.target}` : " • target=all"}
+              {budget.action === "block" ? " • BLOCK" : " • WARN"}
+            </div>
+          </div>
+          <button type="button" class="btn secondary delete-budget-btn" data-budget-id={budget.id}>
+            Delete
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+
+  <script define:vars={{ API_URL, token }}>
+    const budgetForm = document.getElementById("budget-form");
+    budgetForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(budgetForm);
+      const payload = Object.fromEntries(formData.entries());
+      payload.limitValue = Number(payload.limitValue);
+
+      try {
+        const response = await fetch(`${API_URL}/v1/budgets`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          alert(`Failed to save budget: ${text}`);
+          return;
+        }
+        location.reload();
+      } catch (err) {
+        alert("Failed to save budget");
+      }
+    });
+
+    document.querySelectorAll(".delete-budget-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const budgetId = button.getAttribute("data-budget-id");
+        if (!budgetId) return;
+        if (!confirm("Delete this budget policy?")) return;
+        try {
+          const response = await fetch(`${API_URL}/v1/budgets/${budgetId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!response.ok) {
+            const text = await response.text();
+            alert(`Delete failed: ${text}`);
+            return;
+          }
+          location.reload();
+        } catch {
+          alert("Delete failed");
+        }
+      });
+    });
+  </script>
+</Dashboard>
+

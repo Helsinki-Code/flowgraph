@@ -16,7 +16,7 @@
     "test": "node test/smoke.mjs"
   },
   "dependencies": {
-    "@flamegraph/sdk": "*",
+    "flamegraph-sdk": "*",
     "@flamegraph/storage": "*",
     "fastify": "^4.25.2",
     "@fastify/cors": "^8.4.2",
@@ -29,3 +29,4 @@
     "tsx": "^4.7.0"
   }
 }
+

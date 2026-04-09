@@ -2,6 +2,8 @@ import { createClient } from "@libsql/client";
 import {
   SCHEMA_INIT_SQL,
   QueryApiKey,
+  QueryBudget,
+  QueryBudgetViolation,
   QueryEvent,
   QuerySession,
   QueryWorkspace,
@@ -366,6 +368,54 @@ export class TursoStore {
   }
 
   /**
+   * Get events for a session newer than a cursor timestamp (inclusive)
+   */
+  async getSessionEventsSince(
+    sessionId: string,
+    workspaceId: string,
+    sinceStartedAt: number,
+    limit: number = 500,
+  ): Promise<QueryEvent[]> {
+    const safeLimit = Math.max(1, Math.min(limit, 2000));
+    const result = await this.client.execute({
+      sql: `SELECT * FROM events
+            WHERE session_id = ? AND workspace_id = ? AND started_at >= ?
+            ORDER BY started_at ASC
+            LIMIT ?`,
+      args: [sessionId, workspaceId, sinceStartedAt, safeLimit],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      session_id: row.session_id as string,
+      parent_id: row.parent_id as string | undefined,
+      workspace_id: row.workspace_id as string,
+      kind: row.kind as string,
+      started_at: row.started_at as number,
+      ended_at: row.ended_at as number | undefined,
+      model: row.model as string | undefined,
+      provider: row.provider as string | undefined,
+      input_tokens: row.input_tokens as number | undefined,
+      output_tokens: row.output_tokens as number | undefined,
+      cache_read_tokens: row.cache_read_tokens as number | undefined,
+      cache_write_tokens: row.cache_write_tokens as number | undefined,
+      cost_usd: row.cost_usd as number | undefined,
+      stop_reason: row.stop_reason as string | undefined,
+      tool_name: row.tool_name as string | undefined,
+      tool_call_id: row.tool_call_id as string | undefined,
+      tool_input_bytes: row.tool_input_bytes as number | undefined,
+      tool_output_bytes: row.tool_output_bytes as number | undefined,
+      is_error: row.is_error as 0 | 1 | undefined,
+      context_messages: row.context_messages as number | undefined,
+      context_token_estimate: row.context_token_estimate as number | undefined,
+      feature: row.feature as string | undefined,
+      pr_number: row.pr_number as string | undefined,
+      engineer_id: row.engineer_id as string | undefined,
+      metadata: row.metadata as string | undefined,
+    }));
+  }
+
+  /**
    * Get cost breakdown grouped by tool, model, feature, or engineer
    */
   async getCostBreakdown(
@@ -563,6 +613,167 @@ export class TursoStore {
             VALUES (?, ?, ?, ?, ?)`,
       args: [id, workspaceId, idempotencyKey, sessionId || null, Date.now()],
     });
+  }
+
+  /**
+   * Create a budget policy
+   */
+  async createBudget(
+    budget: Omit<QueryBudget, "created_at"> & { created_at?: number },
+  ): Promise<void> {
+    await this.client.execute({
+      sql: `INSERT INTO budgets
+            (id, workspace_id, name, scope, metric, target, limit_value, action, enabled, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        budget.id,
+        budget.workspace_id,
+        budget.name,
+        budget.scope,
+        budget.metric,
+        budget.target || null,
+        budget.limit_value,
+        budget.action,
+        budget.enabled,
+        budget.created_at || Date.now(),
+      ],
+    });
+  }
+
+  /**
+   * List budgets for a workspace
+   */
+  async listBudgets(workspaceId: string, enabledOnly: boolean = false): Promise<QueryBudget[]> {
+    const result = await this.client.execute({
+      sql: enabledOnly
+        ? `SELECT * FROM budgets WHERE workspace_id = ? AND enabled = 1 ORDER BY created_at DESC`
+        : `SELECT * FROM budgets WHERE workspace_id = ? ORDER BY created_at DESC`,
+      args: [workspaceId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      workspace_id: row.workspace_id as string,
+      name: row.name as string,
+      scope: row.scope as "session" | "agent" | "call",
+      metric: row.metric as "cost_usd" | "tokens",
+      target: row.target as string | undefined,
+      limit_value: row.limit_value as number,
+      action: row.action as "warn" | "block",
+      enabled: row.enabled as 0 | 1,
+      created_at: row.created_at as number,
+    }));
+  }
+
+  /**
+   * Delete a budget policy by id scoped to workspace
+   */
+  async deleteBudget(workspaceId: string, budgetId: string): Promise<boolean> {
+    const result = await this.client.execute({
+      sql: `DELETE FROM budgets WHERE workspace_id = ? AND id = ?`,
+      args: [workspaceId, budgetId],
+    });
+    return (result.rowsAffected || 0) > 0;
+  }
+
+  /**
+   * Record a budget violation/audit event
+   */
+  async recordBudgetViolation(
+    violation: Omit<QueryBudgetViolation, "created_at"> & { created_at?: number },
+  ): Promise<void> {
+    await this.client.execute({
+      sql: `INSERT INTO budget_violations
+            (id, workspace_id, budget_id, session_id, event_id, scope, target, metric, current_value, limit_value, action, details, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
+        violation.id,
+        violation.workspace_id,
+        violation.budget_id,
+        violation.session_id || null,
+        violation.event_id || null,
+        violation.scope,
+        violation.target || null,
+        violation.metric,
+        violation.current_value,
+        violation.limit_value,
+        violation.action,
+        violation.details || null,
+        violation.created_at || Date.now(),
+      ],
+    });
+  }
+
+  /**
+   * List budget violations for a session
+   */
+  async listBudgetViolations(
+    workspaceId: string,
+    sessionId: string,
+    limit: number = 50,
+  ): Promise<QueryBudgetViolation[]> {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    const result = await this.client.execute({
+      sql: `SELECT * FROM budget_violations
+            WHERE workspace_id = ? AND session_id = ?
+            ORDER BY created_at DESC
+            LIMIT ?`,
+      args: [workspaceId, sessionId, safeLimit],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      workspace_id: row.workspace_id as string,
+      budget_id: row.budget_id as string,
+      session_id: row.session_id as string | undefined,
+      event_id: row.event_id as string | undefined,
+      scope: row.scope as "session" | "agent" | "call",
+      target: row.target as string | undefined,
+      metric: row.metric as "cost_usd" | "tokens",
+      current_value: row.current_value as number,
+      limit_value: row.limit_value as number,
+      action: row.action as "warn" | "block",
+      details: row.details as string | undefined,
+      created_at: row.created_at as number,
+    }));
+  }
+
+  /**
+   * Aggregate session totals grouped by agentId from event metadata
+   */
+  async getSessionAgentTotals(
+    workspaceId: string,
+    sessionId: string,
+  ): Promise<Record<string, { cost: number; tokens: number }>> {
+    const events = await this.getSessionEventsForWorkspace(sessionId, workspaceId);
+    const totals: Record<string, { cost: number; tokens: number }> = {};
+    for (const event of events) {
+      if (event.kind !== "llm_call") continue;
+      let agentId = "primary";
+      if (event.metadata) {
+        try {
+          const parsed = JSON.parse(event.metadata) as Record<string, unknown>;
+          const raw =
+            parsed.agentId || parsed.agent_id || parsed.agent || parsed.actor || parsed.nodeId;
+          if (typeof raw === "string" && raw.trim() !== "") {
+            agentId = raw.trim();
+          }
+        } catch {
+          // ignore malformed metadata
+        }
+      }
+
+      const tokens =
+        (event.input_tokens || 0) +
+        (event.output_tokens || 0) +
+        (event.cache_read_tokens || 0) +
+        (event.cache_write_tokens || 0);
+      const cost = event.cost_usd || 0;
+      if (!totals[agentId]) totals[agentId] = { cost: 0, tokens: 0 };
+      totals[agentId].cost += cost;
+      totals[agentId].tokens += tokens;
+    }
+    return totals;
   }
 
   /**

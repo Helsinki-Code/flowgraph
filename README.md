@@ -1,6 +1,6 @@
-# Token Flame Graph 🔥
+# Token Flame Graph ðŸ”¥
 
-**CPU profiler for AI agent sessions** — Visualize exactly where tokens burn and optimize your LLM spend.
+**CPU profiler for AI agent sessions** â€” Visualize exactly where tokens burn and optimize your LLM spend.
 
 A drop-in instrumentation wrapper for [`@mariozechner/pi-agent-core`](https://github.com/badlogic/pi-mono) that captures every LLM call, tool execution, and context window event, then renders a **flame graph** showing cost, tokens, and duration at the call level.
 
@@ -9,10 +9,10 @@ A drop-in instrumentation wrapper for [`@mariozechner/pi-agent-core`](https://gi
 ## The Problem
 
 70% of tokens in agent sessions are wasted:
-- **35–45%** on file reading and search
-- **15–25%** on tool output (JSON bloat, noise)
-- **15–20%** on context re-sending (duplicated messages)
-- **5–15%** on actual code generation
+- **35â€“45%** on file reading and search
+- **15â€“25%** on tool output (JSON bloat, noise)
+- **15â€“20%** on context re-sending (duplicated messages)
+- **5â€“15%** on actual code generation
 
 **Nobody can see where.** This tool makes it visible.
 
@@ -20,11 +20,11 @@ A drop-in instrumentation wrapper for [`@mariozechner/pi-agent-core`](https://gi
 
 ## What You Get
 
-1. **Drop-in SDK** — Wrap any pi-agent `Agent` in one line
-2. **Flame Graph Dashboard** — D3-powered interactive visualization of token burn
-3. **Cost Attribution** — See costs grouped by tool, model, feature, engineer, PR
-4. **Loop Detection** — Automatic alerts for infinite tool calls
-5. **Team Insights** — Who/what is burning budget? Drill down to the turn level
+1. **Drop-in SDK** â€” Wrap any pi-agent `Agent` in one line
+2. **Flame Graph Dashboard** â€” D3-powered interactive visualization of token burn
+3. **Cost Attribution** â€” See costs grouped by tool, model, feature, engineer, PR
+4. **Loop Detection** â€” Automatic alerts for infinite tool calls
+5. **Team Insights** â€” Who/what is burning budget? Drill down to the turn level
 
 ---
 
@@ -33,17 +33,17 @@ A drop-in instrumentation wrapper for [`@mariozechner/pi-agent-core`](https://gi
 ### Installation
 
 ```bash
-npm install @flamegraph/sdk @flamegraph/storage
+npm install flamegraph-sdk @flamegraph/storage
 
 # or with pnpm
-pnpm add @flamegraph/sdk @flamegraph/storage
+pnpm add flamegraph-sdk @flamegraph/storage
 ```
 
 ### Usage
 
 ```typescript
 import { Agent } from "@mariozechner/pi-agent-core";
-import { instrumentAgent, LocalCollector } from "@flamegraph/sdk";
+import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
 
 // Create agent as usual
 const agent = new Agent({
@@ -74,12 +74,12 @@ console.log(events);
 
 ```
 token-flamegraph/
-├── packages/
-│   ├── sdk/               # Drop-in instrumentation wrapper
-│   ├── storage/           # SQLite (local) + PostgreSQL (cloud) storage
-│   ├── server/            # Fastify API server for event ingestion
-│   └── web/               # Astro dashboard with D3 flame graph
-└── README.md
+â”œâ”€â”€ packages/
+â”‚   â”œâ”€â”€ sdk/               # Drop-in instrumentation wrapper
+â”‚   â”œâ”€â”€ storage/           # SQLite (local) + PostgreSQL (cloud) storage
+â”‚   â”œâ”€â”€ server/            # Fastify API server for event ingestion
+â”‚   â””â”€â”€ web/               # Astro dashboard with D3 flame graph
+â””â”€â”€ README.md
 ```
 
 ### `packages/sdk`
@@ -97,26 +97,26 @@ Zero-dependency instrumentation. Hooks into `Agent.subscribe()` and `transformCo
 SQLite (development) and PostgreSQL (production) adapters. Implements:
 - Schema with sessions, events, alerts, workspaces
 - Cost breakdown queries (by tool, model, feature, engineer)
-- Loop detection algorithm (tool called 3+ times → flag)
+- Loop detection algorithm (tool called 3+ times â†’ flag)
 
 ### `packages/server`
 
 Fastify API server with routes:
-- `POST /v1/events` — SDK → server event ingest
-- `GET /v1/sessions` — paginated session list
-- `GET /v1/sessions/:id` — session detail + all events
-- `GET /v1/sessions/:id/flamegraph` — flame tree (D3-ready JSON)
-- `GET /v1/cost/breakdown` — cost attribution
-- `GET/POST /v1/alerts` — alert config + history
+- `POST /v1/events` â€” SDK â†’ server event ingest
+- `GET /v1/sessions` â€” paginated session list
+- `GET /v1/sessions/:id` â€” session detail + all events
+- `GET /v1/sessions/:id/flamegraph` â€” flame tree (D3-ready JSON)
+- `GET /v1/cost/breakdown` â€” cost attribution
+- `GET/POST /v1/alerts` â€” alert config + history
 
 ### `packages/web`
 
 Astro + React dashboard:
-- **Sessions** — Table with cost, tokens, loop warnings
-- **Session Detail** — D3 flame graph + cost breakdown
-- **Cost Analysis** — Grouped by tool/model/feature/engineer
-- **Alerts** — Configure cost/loop alerts
-- **Billing** — Stripe subscription management
+- **Sessions** â€” Table with cost, tokens, loop warnings
+- **Session Detail** â€” D3 flame graph + cost breakdown
+- **Cost Analysis** â€” Grouped by tool/model/feature/engineer
+- **Alerts** â€” Configure cost/loop alerts
+- **Billing** â€” Stripe subscription management
 
 ---
 
@@ -165,7 +165,7 @@ See [SECURITY_ROTATION.md](./SECURITY_ROTATION.md) for production key rotation a
 
 ## Integration with pi-mono
 
-The SDK is a **pure wrapper** — no fork, no modifications. It uses pi-mono as an npm dependency:
+The SDK is a **pure wrapper** â€” no fork, no modifications. It uses pi-mono as an npm dependency:
 
 ```json
 {
@@ -255,9 +255,9 @@ Returned by `GET /v1/sessions/:id/flamegraph`. Ready for D3 visualization.
 |---|---|---|---|
 | Sessions/month | 100 | 5,000 | Unlimited |
 | Retention | 7 days | 90 days | 365 days |
-| Cost alerts | ✗ | ✓ | ✓ |
+| Cost alerts | âœ— | âœ“ | âœ“ |
 | Team members | 1 | 5 | Unlimited |
-| API access | ✗ | ✗ | ✓ |
+| API access | âœ— | âœ— | âœ“ |
 | Price | Free | $49/mo | $299/mo |
 
 Enforcement via workspace middleware: check session count against plan quota on ingest.
@@ -323,11 +323,12 @@ MIT. Built on pi-mono (also MIT).
 
 ## Related
 
-- **pi-mono** — [`github.com/badlogic/pi-mono`](https://github.com/badlogic/pi-mono) — The agent framework we instrument
-- **D3** — [`d3js.org`](https://d3js.org/) — Visualization engine
-- **Fastify** — [`fastify.io`](https://fastify.io/) — HTTP server
-- **Astro** — [`astro.build`](https://astro.build/) — Web framework
+- **pi-mono** â€” [`github.com/badlogic/pi-mono`](https://github.com/badlogic/pi-mono) â€” The agent framework we instrument
+- **D3** â€” [`d3js.org`](https://d3js.org/) â€” Visualization engine
+- **Fastify** â€” [`fastify.io`](https://fastify.io/) â€” HTTP server
+- **Astro** â€” [`astro.build`](https://astro.build/) â€” Web framework
 
 ---
 
 **Questions?** Open an issue or check the docs in `/packages/sdk/README.md`.
+

@@ -8,4 +8,6 @@ assert.match(source, /CREATE TABLE IF NOT EXISTS workspaces/);
 assert.match(source, /CREATE TABLE IF NOT EXISTS sessions/);
 assert.match(source, /CREATE TABLE IF NOT EXISTS events/);
 assert.match(source, /CREATE TABLE IF NOT EXISTS ingest_requests/);
+assert.match(source, /CREATE TABLE IF NOT EXISTS budgets/);
+assert.match(source, /CREATE TABLE IF NOT EXISTS budget_violations/);
 console.log("PASS: Storage smoke checks");

@@ -1,9 +1,9 @@
 /**
- * @flamegraph/sdk — Token profiler for AI agent sessions
+ * flamegraph-sdk â€” Token profiler for AI agent sessions
  * Drop-in instrumentation wrapper for @mariozechner/pi-agent-core
  *
  * Usage:
- *   import { instrumentAgent, LocalCollector } from "@flamegraph/sdk";
+ *   import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
  *   import { Agent } from "@mariozechner/pi-agent-core";
  *
  *   const collector = new LocalCollector();
@@ -42,3 +42,4 @@ export { LocalCollector, estimateTokens } from "./collector.js";
 
 // Instrumentation entry points
 export { instrumentAgent, instrumentStream } from "./interceptor.js";
+

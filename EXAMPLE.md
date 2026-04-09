@@ -1,11 +1,11 @@
-# Token Flame Graph — Integration Example
+# Token Flame Graph â€” Integration Example
 
 Here's how to use the SDK with a real pi-agent setup.
 
 ## Setup
 
 ```bash
-npm install @flamegraph/sdk @mariozechner/pi-agent-core @mariozechner/pi-ai
+npm install flamegraph-sdk @mariozechner/pi-agent-core @mariozechner/pi-ai
 ```
 
 ## Basic Example
@@ -13,7 +13,7 @@ npm install @flamegraph/sdk @mariozechner/pi-agent-core @mariozechner/pi-ai
 ```typescript
 import { Agent } from "@mariozechner/pi-agent-core";
 import { getModel } from "@mariozechner/pi-ai";
-import { instrumentAgent, LocalCollector } from "@flamegraph/sdk";
+import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
 
 // 1. Create the collector (local SQLite for development)
 const collector = new LocalCollector({
@@ -99,24 +99,24 @@ The SDK captures attribution data automatically:
 instrumentAgent(agent, {
   collector,
   workspaceId: "acme-corp",
-  feature: "customer-support",  // ← shows in dashboards
-  engineerId: "bob",             // ← cost breakdown by engineer
-  prNumber: "789",               // ← cost by PR
-  projectId: "project-search",   // ← cost by project
+  feature: "customer-support",  // â† shows in dashboards
+  engineerId: "bob",             // â† cost breakdown by engineer
+  prNumber: "789",               // â† cost by PR
+  projectId: "project-search",   // â† cost by project
 });
 ```
 
 Then view:
-- **Cost breakdown by engineer** → See which team members burn the most budget
-- **Cost by feature** → Which features are expensive?
-- **Cost by PR** → Did this change increase token usage?
+- **Cost breakdown by engineer** â†’ See which team members burn the most budget
+- **Cost by feature** â†’ Which features are expensive?
+- **Cost by PR** â†’ Did this change increase token usage?
 
 ## Loop Detection
 
 The SDK automatically detects when the same tool is called 3+ times in a row:
 
 ```
-⚠️ Loop detected: bash called 5 times in turn 3
+âš ï¸ Loop detected: bash called 5 times in turn 3
   - bash (input: 84 bytes, output: 2048 bytes, error: false)
   - bash (input: 84 bytes, output: 2048 bytes, error: false)
   - bash (input: 84 bytes, output: 2048 bytes, error: false)
@@ -190,3 +190,4 @@ const collector = new LocalCollector({
 - [Read the API docs](./packages/sdk/README.md)
 - [Deploy the dashboard](./packages/web/README.md)
 - [Set up Stripe billing](./packages/server/README.md)
+

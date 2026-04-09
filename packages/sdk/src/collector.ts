@@ -50,6 +50,7 @@ export class LocalCollector implements EventCollector {
       kind: "session",
       startedAt: now,
       feature: options.feature,
+      metadata: options.agentId ? { agentId: options.agentId } : undefined,
       prNumber: options.prNumber,
       engineerId: options.engineerId,
       projectId: options.projectId,
@@ -114,12 +115,16 @@ export class LocalCollector implements EventCollector {
       cacheWriteTokens: data.cacheWriteTokens,
       costUsd: data.costUsd,
       stopReason: data.stopReason,
+      metadata: {
+        ...(this.options?.agentId ? { agentId: this.options.agentId } : {}),
+        ...(data.metadata || {}),
+      },
     });
   }
 
   startToolExec(data: ToolExecStartData): void {
     const session = this.sessions.get(data.sessionId);
-    if (!session || !session.currentTurnIndex) return;
+    if (!session || session.currentTurnIndex === undefined) return;
 
     const turn = session.turnStacks.get(session.currentTurnIndex);
     if (!turn) return;
@@ -137,6 +142,10 @@ export class LocalCollector implements EventCollector {
       toolName: data.toolName,
       toolCallId: data.toolCallId,
       toolInputBytes: data.inputBytes,
+      metadata: {
+        ...(this.options?.agentId ? { agentId: this.options.agentId } : {}),
+        ...(data.metadata || {}),
+      },
     });
 
     // Track tool exec state
@@ -176,6 +185,10 @@ export class LocalCollector implements EventCollector {
       endedAt: data.endedAt,
       contextMessages: data.messageCount,
       contextTokenEstimate: data.estimatedTokens,
+      metadata: {
+        ...(this.options?.agentId ? { agentId: this.options.agentId } : {}),
+        ...(data.metadata || {}),
+      },
     });
   }
 
@@ -217,6 +230,7 @@ export class LocalCollector implements EventCollector {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "idempotency-key": ulid(),
           ...(this.apiKey && { Authorization: `Bearer ${this.apiKey}` }),
         },
         body: JSON.stringify(batch),
