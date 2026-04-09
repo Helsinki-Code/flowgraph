@@ -70,6 +70,27 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
   let totalCostUsd = 0;
   let totalTokens = 0;
 
+  // If sessionEvent is synthetic, create and add its node now
+  let isRootSynthetic = false;
+  if (sessionEvent.id === "synthetic-root") {
+    isRootSynthetic = true;
+    const durationMs = sessionEvent.ended_at! - sessionEvent.started_at;
+    const rootNode: FlameNode = {
+      id: sessionEvent.id,
+      name: "session",
+      kind: "session",
+      startedAt: sessionEvent.started_at,
+      endedAt: sessionEvent.ended_at!,
+      durationMs,
+      costUsd: 0,
+      tokens: 0,
+      pctOfTotal: 0,
+      children: [],
+      isError: false,
+    };
+    nodeMap.set(sessionEvent.id, rootNode);
+  }
+
   // First pass: create all nodes
   for (const event of events) {
     const durationMs = (event.ended_at || Date.now()) - event.started_at;
@@ -120,6 +141,12 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
       const parent = nodeMap.get(event.parent_id);
       if (parent) {
         parent.children.push(node);
+      }
+    } else if (isRootSynthetic) {
+      // Link orphan nodes to synthetic root
+      const syntheticRoot = nodeMap.get("synthetic-root");
+      if (syntheticRoot) {
+        syntheticRoot.children.push(node);
       }
     }
   }
