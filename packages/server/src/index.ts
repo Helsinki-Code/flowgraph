@@ -65,34 +65,39 @@ app.post<{ Body: any[] }>("/v1/events", async (request, reply) => {
           loop_detected: 0,
         } as QuerySession);
       } else {
-        await store.insertEvent({
-          id: event.eventId,
-          session_id: event.sessionId,
-          parent_id: event.parentId,
-          workspace_id: event.workspaceId,
-          kind: event.kind,
-          started_at: event.startedAt,
-          ended_at: event.endedAt,
-          model: event.model,
-          provider: event.provider,
-          input_tokens: event.inputTokens,
-          output_tokens: event.outputTokens,
-          cache_read_tokens: event.cacheReadTokens,
-          cache_write_tokens: event.cacheWriteTokens,
-          cost_usd: event.costUsd,
-          stop_reason: event.stopReason,
-          tool_name: event.toolName,
-          tool_call_id: event.toolCallId,
-          tool_input_bytes: event.toolInputBytes,
-          tool_output_bytes: event.toolOutputBytes,
-          is_error: event.isError ? 1 : 0,
-          context_messages: event.contextMessages,
-          context_token_estimate: event.contextTokenEstimate,
-          feature: event.feature,
-          pr_number: event.prNumber,
-          engineer_id: event.engineerId,
-          metadata: event.metadata ? JSON.stringify(event.metadata) : undefined,
-        } as QueryEvent);
+        try {
+          await store.insertEvent({
+            id: event.eventId,
+            session_id: event.sessionId,
+            parent_id: event.parentId,
+            workspace_id: event.workspaceId,
+            kind: event.kind,
+            started_at: event.startedAt,
+            ended_at: event.endedAt,
+            model: event.model,
+            provider: event.provider,
+            input_tokens: event.inputTokens,
+            output_tokens: event.outputTokens,
+            cache_read_tokens: event.cacheReadTokens,
+            cache_write_tokens: event.cacheWriteTokens,
+            cost_usd: event.costUsd,
+            stop_reason: event.stopReason,
+            tool_name: event.toolName,
+            tool_call_id: event.toolCallId,
+            tool_input_bytes: event.toolInputBytes,
+            tool_output_bytes: event.toolOutputBytes,
+            is_error: event.isError ? 1 : 0,
+            context_messages: event.contextMessages,
+            context_token_estimate: event.contextTokenEstimate,
+            feature: event.feature,
+            pr_number: event.prNumber,
+            engineer_id: event.engineerId,
+            metadata: event.metadata ? JSON.stringify(event.metadata) : undefined,
+          } as QueryEvent);
+          console.log(`[event-insert] stored event ${event.eventId} for session ${event.sessionId}`);
+        } catch (err) {
+          console.error(`[event-insert] failed to store event ${event.eventId}:`, err);
+        }
       }
     }
 
