@@ -36,11 +36,11 @@
   },
   "dependencies": {
     "@astrojs/node": "^10.0.4",
-    "flamegraph-sdk": "*",
+    "@fastify/rate-limit": "^10.3.0",
     "astro": "^6.1.5",
     "emoji-regex-xs": "^2.0.1",
+    "flamegraph-sdk": "*",
     "nanostores": "^1.2.0",
     "ulid": "^2.3.0"
   }
 }
-

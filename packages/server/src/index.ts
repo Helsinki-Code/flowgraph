@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import crypto from "crypto";
 import * as Sentry from "@sentry/node";
 import { buildFlameTree, computeTreeMetrics } from "./flamegraph/builder.js";
@@ -30,9 +31,6 @@ const port = parseInt(process.env.PORT || "3000", 10);
 const nodeEnv = process.env.NODE_ENV || "development";
 const allowedGroupBy = new Set<GroupBy>(["tool", "model", "feature", "engineer"]);
 
-const eventsRateWindowMs = 60_000;
-const eventsRateMax = 120;
-const eventsRateState = new Map<string, { count: number; windowStart: number }>();
 const storeRetryBaseMs = 1_500;
 const storeRetryMaxMs = 30_000;
 
@@ -113,19 +111,6 @@ function requireClerkAuth(request: any, reply: any): boolean {
     );
     return false;
   }
-  return true;
-}
-
-function checkEventsRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const current = eventsRateState.get(ip);
-  if (!current || now - current.windowStart > eventsRateWindowMs) {
-    eventsRateState.set(ip, { count: 1, windowStart: now });
-    return true;
-  }
-  if (current.count >= eventsRateMax) return false;
-  current.count += 1;
-  eventsRateState.set(ip, current);
   return true;
 }
 
@@ -362,7 +347,18 @@ await app.register(cors, {
   },
 });
 
-// Register auth + basic rate limiting middleware
+// Register rate limiting
+await app.register(rateLimit, {
+  max: 120,
+  timeWindow: "1 minute",
+  skipOnError: true,
+  keyGenerator: (request) => {
+    const ip = request.ip || "unknown";
+    return ip;
+  },
+});
+
+// Register auth middleware
 app.addHook("preHandler", async (request, reply) => {
   if (request.url === "/health") {
     return;
@@ -384,18 +380,6 @@ app.addHook("preHandler", async (request, reply) => {
     if (reply.sent) return;
   }
 
-  if (request.url.startsWith("/v1/events")) {
-    const ip = request.ip || request.headers["x-forwarded-for"] || "unknown";
-    if (!checkEventsRateLimit(String(ip))) {
-      sendError(
-        request,
-        reply,
-        429,
-        "RATE_LIMITED",
-        "Too many event-ingest requests. Retry in a minute.",
-      );
-    }
-  }
 });
 
 /**
