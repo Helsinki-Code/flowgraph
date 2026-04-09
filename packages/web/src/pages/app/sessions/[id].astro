@@ -64,17 +64,190 @@ if (token) {
 ---
 
 <Dashboard title={`Session ${id?.slice(0, 12)}`} description="Flame graph analysis and cost breakdown">
+  <style>
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+      color: #94a3b8;
+    }
+
+    .breadcrumb a {
+      color: #3b82f6;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .breadcrumb a:hover {
+      color: #60a5fa;
+    }
+
+    .breadcrumb-current {
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+
+    .error-banner {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background: #7f1d1d;
+      color: #fca5a5;
+      margin-bottom: 1.5rem;
+      border: 1px solid #991b1b;
+      font-size: 0.9rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
+      background: #111118;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+    }
+
+    .metric-card:hover {
+      border-color: #334155;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .metric-icon {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 0.75rem;
+      opacity: 0.7;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+      font-weight: 700;
+      font-family: "JetBrains Mono", monospace;
+      color: #e2e8f0;
+    }
+
+    .metric-value.cost {
+      color: #f97316;
+    }
+
+    .loop-warning {
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background: #7c2d12;
+      color: #fed7aa;
+      margin-bottom: 1.5rem;
+      border: 1px solid #f97316;
+      font-size: 0.9rem;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #e2e8f0;
+    }
+
+    .flame-graph-card {
+      background: #0a0a10;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .detail-card {
+      background: #111118;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .detail-card h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #e2e8f0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid #1e1e2e;
+      font-size: 0.9rem;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: #94a3b8;
+    }
+
+    .detail-value {
+      color: #e2e8f0;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.85rem;
+    }
+
+    .back-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      border-radius: 0.5rem;
+      text-decoration: none;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .back-button:hover {
+      background: rgba(51, 65, 85, 0.3);
+      border-color: #475569;
+      color: #e2e8f0;
+    }
+
+    @media (max-width: 768px) {
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
   {
     error && (
-      <div
-        style={{
-          padding: "1rem",
-          borderRadius: "0.375rem",
-          background: "#7f1d1d",
-          color: "#fca5a5",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <div class="error-banner">
         {error}
       </div>
     )
@@ -83,116 +256,129 @@ if (token) {
   {
     session && (
       <>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-            gap: "1rem",
-            marginBottom: "2rem",
-          }}
-        >
-          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Total Cost
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: "700", color: "#f97316" }}>
+        <div class="breadcrumb">
+          <a href="/app">Sessions</a>
+          <span>/</span>
+          <span class="breadcrumb-current">{id?.slice(0, 12)}</span>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-card">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="8"></circle>
+              <path d="M12 6v12M8 10h8"></path>
+            </svg>
+            <div class="metric-label">Total Cost</div>
+            <div class="metric-value cost">
               ${session.total_cost_usd.toFixed(4)}
             </div>
           </div>
-          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Total Tokens
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
+
+          <div class="metric-card">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M3 6v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6M3 9h18"></path>
+            </svg>
+            <div class="metric-label">Total Tokens</div>
+            <div class="metric-value">
               {(session.total_tokens || 0).toLocaleString()}
             </div>
           </div>
-          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Turns
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
+
+          <div class="metric-card">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <div class="metric-label">Turns</div>
+            <div class="metric-value">
               {session.turn_count}
             </div>
           </div>
-          <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-            <div style={{ fontSize: "0.75rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem", fontWeight: "600" }}>
-              Duration
-            </div>
-            <div style={{ fontSize: "1.75rem", fontWeight: "700" }}>
+
+          <div class="metric-card">
+            <svg class="metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <div class="metric-label">Duration</div>
+            <div class="metric-value">
               {Math.round((session.ended_at - session.started_at) / 1000)}s
             </div>
           </div>
         </div>
 
         {session.loop_detected && (
-          <div
-            style={{
-              padding: "1rem",
-              borderRadius: "0.375rem",
-              background: "#7c2d12",
-              color: "#fed7aa",
-              marginBottom: "1.5rem",
-              border: "1px solid #f97316",
-            }}
-          >
+          <div class="loop-warning">
             <strong>⚠ Warning:</strong> Possible infinite loop detected. Check the flame graph for repeated tool calls.
           </div>
         )}
 
-        {tree && (
-          <div style={{ marginBottom: "2rem" }}>
-            <div style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
-              Flame Graph
-            </div>
+        {tree ? (
+          <div class="flame-graph-card">
             <FlameGraphViewer tree={tree} sessionId={id} />
+          </div>
+        ) : (
+          <div style={{
+            background: "#111118",
+            border: "1px solid #1e1e2e",
+            borderRadius: "12px",
+            padding: "3rem 2rem",
+            marginBottom: "2rem",
+            textAlign: "center",
+          }}>
+            <div style={{ fontSize: "1rem", fontWeight: "600", color: "#cbd5e1", marginBottom: "0.5rem" }}>
+              No flame graph data
+            </div>
+            <div style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: "1.5", marginBottom: "1.5rem" }}>
+              Events may still be processing. <a href="" style={{ color: "#3b82f6", textDecoration: "none" }}>Refresh the page</a> in a moment.
+            </div>
           </div>
         )}
 
-        <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", padding: "1.5rem" }}>
-          <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>
-            Session Details
-          </h3>
-          <table style={{ width: "100%", fontSize: "0.875rem" }}>
-            <tr style={{ borderBottom: "1px solid #334155" }}>
-              <td style={{ padding: "0.5rem", color: "#94a3b8" }}>ID</td>
-              <td style={{ padding: "0.5rem", fontFamily: "monospace" }}>
-                {session.id}
-              </td>
-            </tr>
-            <tr style={{ borderBottom: "1px solid #334155" }}>
-              <td style={{ padding: "0.5rem", color: "#94a3b8" }}>Started</td>
-              <td style={{ padding: "0.5rem" }}>
-                {new Date(session.started_at).toISOString()}
-              </td>
-            </tr>
+        <div class="details-grid">
+          <div class="detail-card">
+            <h4>Session Details</h4>
+            <div class="detail-row">
+              <span class="detail-label">ID</span>
+              <span class="detail-value">{session.id}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Started</span>
+              <span class="detail-value">{new Date(session.started_at).toISOString()}</span>
+            </div>
             {session.feature && (
-              <tr style={{ borderBottom: "1px solid #334155" }}>
-                <td style={{ padding: "0.5rem", color: "#94a3b8" }}>Feature</td>
-                <td style={{ padding: "0.5rem" }}>
-                  {session.feature}
-                </td>
-              </tr>
+              <div class="detail-row">
+                <span class="detail-label">Feature</span>
+                <span class="detail-value">{session.feature}</span>
+              </div>
             )}
-          </table>
+          </div>
+
+          {metrics && (
+            <div class="detail-card">
+              <h4>Quick Stats</h4>
+              <div class="detail-row">
+                <span class="detail-label">Avg Tokens/Turn</span>
+                <span class="detail-value">
+                  {session.turn_count > 0 ? Math.round(session.total_tokens / session.turn_count) : 0}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Avg Cost/Turn</span>
+                <span class="detail-value">
+                  ${(session.total_cost_usd / (session.turn_count || 1)).toFixed(4)}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Max Depth</span>
+                <span class="detail-value">{metrics.maxDepth}</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <a
-            href="/app"
-            style={{
-              display: "inline-block",
-              padding: "0.75rem 1.5rem",
-              background: "#334155",
-              color: "#e2e8f0",
-              borderRadius: "0.375rem",
-              textDecoration: "none",
-              transition: "background 0.2s",
-            }}
-          >
-            ← Back to Sessions
-          </a>
-        </div>
+        <a href="/app" class="back-button">
+          ← Back to Sessions
+        </a>
       </>
     )
   }

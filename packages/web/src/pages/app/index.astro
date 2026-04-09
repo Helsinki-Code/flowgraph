@@ -6,7 +6,6 @@ import { API_URL } from "../../lib/api";
 
 let userId, orgId, token;
 try {
-  // Ensure auth exists before calling it
   if (!Astro.locals?.auth) {
     return Astro.redirect("/sign-in");
   }
@@ -61,168 +60,410 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
       transform: scaleY(0.93);
     }
   }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .metric-card {
+    background: #111118;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.2s;
+  }
+
+  .metric-card:hover {
+    border-color: #334155;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-family: "JetBrains Mono", monospace;
+    color: #e2e8f0;
+  }
+
+  .metric-value.cost {
+    color: #f97316;
+  }
+
+  .error-banner {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background: #7f1d1d;
+    color: #fca5a5;
+    margin-bottom: 1.5rem;
+    border: 1px solid #991b1b;
+  }
+
+  .sessions-container {
+    background: #111118;
+    border: 1px solid #1e1e2e;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .sessions-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #1e1e2e;
+  }
+
+  .sessions-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: #e2e8f0;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    font-size: 0.875rem;
+  }
+
+  table thead {
+    background: #0f172a;
+    border-bottom: 1px solid #1e1e2e;
+  }
+
+  table th {
+    padding: 1rem;
+    text-align: left;
+    color: #94a3b8;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  table tbody tr {
+    border-bottom: 1px solid #1e1e2e;
+    transition: background 0.15s;
+  }
+
+  table tbody tr:hover {
+    background: rgba(249, 115, 22, 0.05);
+  }
+
+  table td {
+    padding: 1rem;
+    color: #cbd5e1;
+  }
+
+  table a {
+    color: #60a5fa;
+    text-decoration: none;
+    transition: color 0.2s;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+  }
+
+  table a:hover {
+    color: #93c5fd;
+  }
+
+  .status-ok {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #10b981;
+    font-weight: 500;
+  }
+
+  .status-loop {
+    display: inline-block;
+    background: #7c2d12;
+    color: #fed7aa;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+
+  .empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #e2e8f0;
+  }
+
+  .empty-state-description {
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .animation-demo {
+    background: #0a0a10;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #1e1e2e;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 150px;
+  }
+
+  .bar {
+    border-radius: 0.25rem;
+    flex: 1;
+  }
+
+  .legend {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-dot {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 0.125rem;
+    display: inline-block;
+  }
+
+  .setup-steps {
+    background: #0a0a10;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    border: 1px solid #1e1e2e;
+    margin-bottom: 2rem;
+  }
+
+  .setup-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: #e2e8f0;
+  }
+
+  .step {
+    margin-bottom: 1.5rem;
+  }
+
+  .step:last-child {
+    margin-bottom: 0;
+  }
+
+  .step-number {
+    font-size: 0.875rem;
+    color: #f97316;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+  }
+
+  .step-code {
+    background: #1a2836;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.85rem;
+    color: #e2e8f0;
+    font-family: "JetBrains Mono", monospace;
+    overflow: auto;
+    border: 1px solid #2a3f4f;
+  }
+
+  .step-text {
+    color: #cbd5e1;
+    font-size: 0.875rem;
+  }
+
+  .cta-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #f97316;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+
+  .cta-button:hover {
+    background: #ea580c;
+  }
+
+  @media (max-width: 768px) {
+    .metric-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .legend {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  }
 </style>
 
 <Dashboard title="Sessions" description="View and analyze your AI agent session profiles">
   {
     error && (
-      <div
-        style={{
-          padding: "1rem",
-          borderRadius: "0.375rem",
-          background: "#7f1d1d",
-          color: "#fca5a5",
-          marginBottom: "1.5rem",
-        }}
-      >
+      <div class="error-banner">
         {error}
       </div>
     )
   }
 
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-      gap: "1rem",
-      marginBottom: "2rem",
-    }}
-  >
-    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-        Total Sessions
-      </div>
-      <div style={{ fontSize: "2rem", fontWeight: "700" }}>{sessions.length}</div>
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="metric-label">Total Sessions</div>
+      <div class="metric-value">{sessions.length}</div>
     </div>
-    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-        Total Cost
-      </div>
-      <div style={{ fontSize: "2rem", fontWeight: "700" }}>${totalCost.toFixed(4)}</div>
+    <div class="metric-card">
+      <div class="metric-label">Total Cost</div>
+      <div class="metric-value cost">${totalCost.toFixed(4)}</div>
     </div>
-    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-      <div style={{ fontSize: "0.875rem", color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.5rem" }}>
-        Avg Cost/Session
-      </div>
-      <div style={{ fontSize: "2rem", fontWeight: "700" }}>${avgCost.toFixed(4)}</div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Cost/Session</div>
+      <div class="metric-value">${avgCost.toFixed(4)}</div>
     </div>
   </div>
 
-  <div style={{ background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", overflow: "hidden" }}>
-    <div style={{ padding: "1.5rem", borderBottom: "1px solid #334155" }}>
-      <h2 style={{ fontSize: "1.1rem", fontWeight: "600" }}>Recent Sessions</h2>
+  <div class="sessions-container">
+    <div class="sessions-header">
+      <h2>Recent Sessions</h2>
     </div>
     {sessions.length === 0 ? (
-      <div style={{ background: "#1e293b", borderRadius: "0.75rem", border: "1px solid #334155", padding: "3rem", maxWidth: "700px", margin: "2rem auto" }}>
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>🔥</div>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.5rem" }}>Token Flame Graph</h2>
-          <p style={{ color: "#94a3b8", marginBottom: "1.5rem", lineHeight: "1.6" }}>
-            A profiler for AI agents. Every LLM call, tool call, and context window your agent touches gets recorded as a span. We render these as flame graphs so you can see exactly where tokens and money burn.
-          </p>
+      <div class="empty-state">
+        <div class="empty-state-icon">🔥</div>
+        <h2 class="empty-state-title">Token Flame Graph</h2>
+        <p class="empty-state-description">
+          A profiler for AI agents. Every LLM call, tool call, and context window your agent touches gets
+          recorded as a span. We render these as flame graphs so you can see exactly where tokens and money burn.
+        </p>
+
+        <div class="animation-demo">
+          <div class="bar" style={{ background: "#7c3aed", height: "40%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0s" }}></div>
+          <div class="bar" style={{ background: "#f59e0b", height: "65%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.1s" }}></div>
+          <div class="bar" style={{ background: "#7c3aed", height: "50%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.2s" }}></div>
+          <div class="bar" style={{ background: "#f59e0b", height: "75%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.3s" }}></div>
+          <div class="bar" style={{ background: "#7c3aed", height: "55%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.4s" }}></div>
+          <div class="bar" style={{ background: "#f59e0b", height: "70%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.5s" }}></div>
+          <div class="bar" style={{ background: "#ef4444", height: "85%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.6s" }}></div>
+          <div class="bar" style={{ background: "#7c3aed", height: "45%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.7s" }}></div>
+          <div class="bar" style={{ background: "#f59e0b", height: "60%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.8s" }}></div>
+          <div class="bar" style={{ background: "#7c3aed", height: "50%", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.9s" }}></div>
         </div>
 
-        <!-- Mini Flame Graph Animation -->
-        <div style={{ background: "#0f172a", padding: "1.5rem", borderRadius: "0.5rem", marginBottom: "2rem", border: "1px solid #334155", display: "flex", alignItems: "flex-end", justifyContent: "center", gap: "0.5rem", height: "150px" }}>
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "flex-end", justifyContent: "space-around", gap: "0.5rem" }}>
-            <div style={{ background: "#7c3aed", width: "8%", height: "40%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0s" }}></div>
-            <div style={{ background: "#f59e0b", width: "8%", height: "65%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.1s" }}></div>
-            <div style={{ background: "#7c3aed", width: "8%", height: "50%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.2s" }}></div>
-            <div style={{ background: "#f59e0b", width: "8%", height: "75%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.3s" }}></div>
-            <div style={{ background: "#7c3aed", width: "8%", height: "55%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.4s" }}></div>
-            <div style={{ background: "#f59e0b", width: "8%", height: "70%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.5s" }}></div>
-            <div style={{ background: "#ef4444", width: "8%", height: "85%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.6s" }}></div>
-            <div style={{ background: "#7c3aed", width: "8%", height: "45%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.7s" }}></div>
-            <div style={{ background: "#f59e0b", width: "8%", height: "60%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.8s" }}></div>
-            <div style={{ background: "#7c3aed", width: "8%", height: "50%", borderRadius: "0.25rem", animation: "flamePulse 2s ease-in-out infinite", animationDelay: "0.9s" }}></div>
-          </div>
-        </div>
-
-        <div style={{ textAlign: "center", marginBottom: "2rem", color: "#cbd5e1", fontSize: "0.9rem" }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginRight: "1rem" }}>
-            <span style={{ width: "0.75rem", height: "0.75rem", background: "#7c3aed", borderRadius: "0.125rem", display: "inline-block" }}></span>
+        <div class="legend">
+          <span class="legend-item">
+            <span class="legend-dot" style={{ backgroundColor: "#7c3aed" }}></span>
             LLM call
           </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", marginRight: "1rem" }}>
-            <span style={{ width: "0.75rem", height: "0.75rem", background: "#f59e0b", borderRadius: "0.125rem", display: "inline-block" }}></span>
+          <span class="legend-item">
+            <span class="legend-dot" style={{ backgroundColor: "#f59e0b" }}></span>
             Tool call
           </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
-            <span style={{ width: "0.75rem", height: "0.75rem", background: "#ef4444", borderRadius: "0.125rem", display: "inline-block" }}></span>
+          <span class="legend-item">
+            <span class="legend-dot" style={{ backgroundColor: "#ef4444" }}></span>
             Loop detected
           </span>
         </div>
 
-        <div style={{ background: "#0f172a", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155", marginBottom: "2rem", textAlign: "left" }}>
-          <h3 style={{ fontSize: "1rem", fontWeight: "700", marginBottom: "1.5rem", textAlign: "center" }}>Get started in 3 steps</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#f97316", fontWeight: "600", marginBottom: "0.5rem" }}>1 Install SDK</div>
-              <code style={{ background: "#1a2836", padding: "0.5rem 0.75rem", borderRadius: "0.25rem", display: "block", fontSize: "0.85rem", color: "#e2e8f0", fontFamily: "JetBrains Mono, monospace", overflow: "auto" }}>npm install @flamegraph/sdk</code>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#f97316", fontWeight: "600", marginBottom: "0.5rem" }}>2 Instrument your agent</div>
-              <code style={{ background: "#1a2836", padding: "0.75rem", borderRadius: "0.25rem", display: "block", fontSize: "0.85rem", color: "#e2e8f0", fontFamily: "JetBrains Mono, monospace", overflow: "auto" }}>
-{`import { LocalCollector } from "flamegraph-sdk";
+        <div class="setup-steps">
+          <h3 class="setup-title">Get started in 3 steps</h3>
+          <div class="step">
+            <div class="step-number">1 Install SDK</div>
+            <code class="step-code">npm install @flamegraph/sdk</code>
+          </div>
+          <div class="step">
+            <div class="step-number">2 Instrument your agent</div>
+            <code class="step-code">{`import { LocalCollector } from "flamegraph-sdk";
 instrumentAgent(agent, {
   collector: new LocalCollector({
     serverUrl: "https://api.example.com",
     apiKey: "sk_your_key_here"
   })
-});`}
-              </code>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.875rem", color: "#f97316", fontWeight: "600", marginBottom: "0.5rem" }}>3 Run your agent</div>
-              <p style={{ color: "#cbd5e1", fontSize: "0.875rem" }}>Sessions appear here automatically when your agent runs with instrumentation.</p>
-            </div>
+});`}</code>
+          </div>
+          <div class="step">
+            <div class="step-number">3 Run your agent</div>
+            <p class="step-text">Sessions appear here automatically when your agent runs with instrumentation.</p>
           </div>
         </div>
 
         <div style={{ textAlign: "center" }}>
-          <a href="/app/settings" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "#f97316", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600", transition: "background 0.2s" }} onmouseover="this.style.background='#ea580c'" onmouseout="this.style.background='#f97316'">
+          <a href="/app/settings" class="cta-button">
             → Go to Settings to get your API key
           </a>
         </div>
       </div>
     ) : (
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", fontSize: "0.875rem" }}>
+      <div class="table-wrapper">
+        <table>
           <thead>
-            <tr style={{ borderBottom: "1px solid #334155", background: "#0f172a" }}>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>ID</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Feature</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Duration</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Cost</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Tokens</th>
-              <th style={{ padding: "1rem", textAlign: "left", color: "#94a3b8", fontWeight: "600" }}>Status</th>
+            <tr>
+              <th>ID</th>
+              <th>Feature</th>
+              <th>Duration</th>
+              <th>Cost</th>
+              <th>Tokens</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {sessions.map((session: any) => {
               const durationSec = Math.round((session.ended_at - session.started_at) / 1000);
               return (
-                <tr
-                  style={{ borderBottom: "1px solid #334155", transition: "background 0.2s" }}
-                  onmouseover="this.style.background='rgba(255,255,255,0.03)'"
-                  onmouseout="this.style.background='transparent'"
-                >
-                  <td style={{ padding: "1rem" }}>
-                    <a href={`/app/sessions/${session.id}`} style={{ color: "#6366f1", textDecoration: "none" }}>
+                <tr>
+                  <td>
+                    <a href={`/app/sessions/${session.id}`}>
                       {session.id.slice(0, 12)}...
                     </a>
                   </td>
-                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{session.feature || "—"}</td>
-                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{durationSec}s</td>
-                  <td style={{ padding: "1rem", fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
-                  <td style={{ padding: "1rem", color: "#a1a1aa" }}>{(session.total_tokens || 0).toLocaleString()}</td>
-                  <td style={{ padding: "1rem" }}>
+                  <td>{session.feature || "—"}</td>
+                  <td>{durationSec}s</td>
+                  <td style={{ fontWeight: "600" }}>${session.total_cost_usd.toFixed(4)}</td>
+                  <td>{(session.total_tokens || 0).toLocaleString()}</td>
+                  <td>
                     {session.loop_detected ? (
-                      <span style={{ background: "#7c2d12", color: "#fed7aa", padding: "0.25rem 0.75rem", borderRadius: "0.25rem", fontSize: "0.8rem" }}>
-                        LOOP
-                      </span>
+                      <span class="status-loop">LOOP DETECTED</span>
                     ) : (
-                      <span style={{ color: "#22c55e" }}>OK</span>
+                      <span class="status-ok">
+                        <span>✓</span>
+                        OK
+                      </span>
                     )}
                   </td>
                 </tr>

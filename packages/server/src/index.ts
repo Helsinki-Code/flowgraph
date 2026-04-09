@@ -183,11 +183,6 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/flamegraph", async (reques
     const { id } = request.params;
     const events = await store.getSessionEvents(id);
 
-    if (events.length === 0) {
-      reply.code(404);
-      return { error: "no events found" };
-    }
-
     const tree = buildFlameTree(events);
     const metrics = computeTreeMetrics(tree);
 

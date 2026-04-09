@@ -29,9 +29,41 @@ export interface FlameNode {
 export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
   if (events.length === 0) return null;
 
-  // Find the root session event
-  const sessionEvent = events.find((e) => e.kind === "session");
-  if (!sessionEvent) return null;
+  // Find the root session event, or create synthetic root from event bounds
+  let sessionEvent = events.find((e) => e.kind === "session");
+  if (!sessionEvent) {
+    // Create synthetic root from first and last event timestamps
+    const minStart = Math.min(...events.map((e) => e.started_at));
+    const maxEnd = Math.max(...events.map((e) => e.ended_at || e.started_at));
+    sessionEvent = {
+      id: "synthetic-root",
+      session_id: events[0].session_id,
+      parent_id: null,
+      workspace_id: events[0].workspace_id,
+      kind: "session",
+      started_at: minStart,
+      ended_at: maxEnd,
+      cost_usd: 0,
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_read_tokens: 0,
+      cache_write_tokens: 0,
+      tool_name: null,
+      tool_call_id: null,
+      tool_input_bytes: 0,
+      tool_output_bytes: 0,
+      is_error: false,
+      model: null,
+      provider: null,
+      stop_reason: null,
+      feature: null,
+      pr_number: null,
+      engineer_id: null,
+      context_messages: 0,
+      context_token_estimate: 0,
+      metadata: null,
+    } as QueryEvent;
+  }
 
   // Build a map of id → node for parent/child linking
   const nodeMap = new Map<string, FlameNode>();

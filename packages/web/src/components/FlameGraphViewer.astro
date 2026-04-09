@@ -1,5 +1,4 @@
 ---
-// Simplified Flame Graph - fast rendering while fixing build issues
 interface Props {
   tree: any;
   sessionId: string;
@@ -7,17 +6,39 @@ interface Props {
 
 const { tree, sessionId } = Astro.props;
 
-function flattenTree(node: any, depth: number = 0): Array<any> {
-  const result = [{ ...node, depth }];
-  for (const child of node.children || []) {
-    result.push(...flattenTree(child, depth + 1));
-  }
-  return result;
+// Flatten tree into a map of nodes by depth level
+interface FlatNode {
+  node: any;
+  depth: number;
+  startPercent: number;
+  widthPercent: number;
 }
 
-const nodes = flattenTree(tree);
-const totalCost = tree?.costUsd || 0;
-const totalDuration = tree?.durationMs || 1;
+function flattenByDepth(node: any): Map<number, FlatNode[]> {
+  const depthMap = new Map<number, FlatNode[]>();
+
+  function visit(n: any, depth: number, sessionStart: number, totalDuration: number): void {
+    const startPercent = ((n.startedAt - sessionStart) / totalDuration) * 100;
+    const widthPercent = Math.max(0.5, (n.durationMs / totalDuration) * 100);
+
+    if (!depthMap.has(depth)) {
+      depthMap.set(depth, []);
+    }
+    depthMap.get(depth)!.push({
+      node: n,
+      depth,
+      startPercent,
+      widthPercent,
+    });
+
+    for (const child of n.children || []) {
+      visit(child, depth + 1, sessionStart, totalDuration);
+    }
+  }
+
+  visit(node, 0, node.startedAt, node.durationMs);
+  return depthMap;
+}
 
 function getColor(kind: string): string {
   switch (kind) {
@@ -35,143 +56,298 @@ function getColor(kind: string): string {
       return "#6b7280";
   }
 }
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+}
+
+const depthMap = flattenByDepth(tree);
+const maxDepth = Math.max(...depthMap.keys());
+const totalDuration = tree.durationMs;
 ---
 
 <div class="fg-container">
   <style>
     .fg-container {
-      background: #0f172a;
-      border-radius: 0.5rem;
-      border: 1px solid #334155;
+      background: #0a0a10;
+      border: 1px solid #1e1e2e;
+      border-radius: 12px;
       overflow: hidden;
-      padding: 1rem;
+      padding: 1.5rem;
     }
 
-    .fg-title {
-      font-size: 0.875rem;
-      color: #94a3b8;
-      margin-bottom: 1rem;
-      text-transform: uppercase;
+    .fg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #1e1e2e;
+      padding-bottom: 1rem;
+    }
+
+    .fg-header h3 {
+      font-size: 1rem;
       font-weight: 600;
+      color: #e2e8f0;
+      margin: 0;
     }
 
-    .fg-rows {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .fg-row {
-      display: flex;
-      align-items: center;
-      height: 28px;
-      gap: 1rem;
-    }
-
-    .fg-depth-label {
+    .fg-header-meta {
+      font-size: 0.85rem;
       color: #94a3b8;
-      font-size: 0.75rem;
-      min-width: 60px;
-      text-align: right;
       font-family: "JetBrains Mono", monospace;
     }
 
-    .fg-bar-container {
+    .fg-ruler {
+      display: flex;
+      margin-bottom: 1rem;
+      height: 24px;
+      align-items: flex-end;
+      gap: 0;
+    }
+
+    .fg-ruler-tick {
+      flex: 1;
+      text-align: center;
+      font-size: 10px;
+      color: #64748b;
+      font-family: "JetBrains Mono", monospace;
+      border-left: 1px solid #334155;
+      padding-left: 4px;
+    }
+
+    .fg-ruler-tick:first-child {
+      border-left: none;
+    }
+
+    .fg-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 1.5rem;
+    }
+
+    .fg-depth-row {
+      display: flex;
+      gap: 0.5rem;
+      height: 32px;
+      align-items: center;
+      position: relative;
+    }
+
+    .fg-depth-label {
+      width: 40px;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      flex-shrink: 0;
+    }
+
+    .fg-row-content {
       flex: 1;
       position: relative;
-      display: flex;
-      align-items: center;
+      height: 100%;
     }
 
     .fg-bar {
-      height: 24px;
-      background: #3b82f6;
-      border: 1px solid #1e293b;
+      position: absolute;
+      height: 28px;
       border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       padding: 0 8px;
       display: flex;
       align-items: center;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s ease-out;
       color: #e2e8f0;
-      font-size: 11px;
+      font-size: 10px;
       font-family: "JetBrains Mono", monospace;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      position: relative;
-      min-width: 50px;
+      opacity: 0.85;
+      top: 2px;
     }
 
     .fg-bar:hover {
-      opacity: 0.85;
-      box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+      opacity: 1;
+      transform: scaleY(1.15);
+      z-index: 10;
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.5);
     }
 
     .fg-bar.loop {
       border: 2px solid #dc2626;
-      background: #991b1b;
-      box-shadow: 0 0 6px rgba(220, 38, 38, 0.6);
+      animation: loopPulse 2s infinite;
     }
 
     .fg-bar.error {
-      background: #f97316;
+      border-color: rgba(249, 115, 22, 0.5);
     }
 
-    .fg-tooltip-hint {
-      font-size: 9px;
-      color: #94a3b8;
-      padding: 2px 4px;
-      margin-left: auto;
+    @keyframes loopPulse {
+      0%, 100% {
+        box-shadow: 0 0 4px rgba(220, 38, 38, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 12px rgba(220, 38, 38, 0.6);
+      }
+    }
+
+    .fg-tooltip {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      background: #1e1e2e;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      font-size: 10px;
+      color: #cbd5e1;
+      white-space: nowrap;
+      font-family: "JetBrains Mono", monospace;
+      z-index: 20;
+      margin-bottom: 0.5rem;
+      pointer-events: none;
       opacity: 0;
-      transition: opacity 0.2s;
+      transition: opacity 0.15s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
 
-    .fg-row:hover .fg-tooltip-hint {
+    .fg-bar:hover .fg-tooltip {
       opacity: 1;
     }
 
+    .fg-legend {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #1e1e2e;
+      flex-wrap: wrap;
+    }
+
+    .fg-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .fg-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
     .empty-state {
-      padding: 2rem;
+      padding: 3rem 2rem;
       text-align: center;
       color: #94a3b8;
     }
+
+    .empty-state-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state-text {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
   </style>
 
+  <div class="fg-header">
+    <h3>Execution Timeline</h3>
+    <div class="fg-header-meta">
+      Total: {formatDuration(totalDuration)}
+    </div>
+  </div>
+
   {
-    nodes.length === 0 ? (
-      <div class="empty-state">No events to display</div>
+    depthMap.size === 0 ? (
+      <div class="empty-state">
+        <div class="empty-state-title">No flame graph data</div>
+        <div class="empty-state-text">
+          Events may still be processing. Refresh the page in a moment.
+        </div>
+      </div>
     ) : (
       <>
-        <div class="fg-title">Execution Timeline</div>
-        <div class="fg-rows">
-          {nodes.map((node: any) => {
-            const widthPercent = Math.max(3, (node.durationMs / totalDuration) * 100);
-            const label = node.name.length > 30 ? node.name.substring(0, 27) + "..." : node.name;
+        <div class="fg-ruler">
+          <div class="fg-ruler-tick">0%</div>
+          <div class="fg-ruler-tick">25%</div>
+          <div class="fg-ruler-tick">50%</div>
+          <div class="fg-ruler-tick">75%</div>
+          <div class="fg-ruler-tick">100%</div>
+        </div>
 
+        <div class="fg-chart">
+          {Array.from({ length: maxDepth + 1 }).map((_, depth) => {
+            const nodesAtDepth = depthMap.get(depth) || [];
             return (
-              <div class="fg-row">
+              <div class="fg-depth-row">
                 <div class="fg-depth-label">
-                  {node.depth === 0 ? "session" : `L${node.depth}`}
+                  {depth === 0 ? "root" : `L${depth}`}
                 </div>
-                <div class="fg-bar-container">
-                  <div
-                    class={`fg-bar ${node.loopFlag ? "loop" : ""} ${node.isError ? "error" : ""}`}
-                    style={{
-                      background: getColor(node.kind),
-                      width: `${widthPercent}%`,
-                    }}
-                    title={`${node.name} | ${node.durationMs.toFixed(0)}ms | $${node.costUsd?.toFixed(4) || "0.0000"} | ${node.tokens} tokens | ${node.pctOfTotal?.toFixed(1) || "0"}% of total`}
-                  >
-                    <span>{label}</span>
-                    <span class="fg-tooltip-hint">
-                      {node.durationMs.toFixed(0)}ms • ${node.costUsd?.toFixed(4) || "0.0000"}
-                    </span>
-                  </div>
+                <div class="fg-row-content">
+                  {nodesAtDepth.map((item: FlatNode) => {
+                    const label =
+                      item.node.name.length > 25
+                        ? item.node.name.substring(0, 22) + "..."
+                        : item.node.name;
+                    return (
+                      <div
+                        class={`fg-bar ${item.node.loopFlag ? "loop" : ""} ${
+                          item.node.isError ? "error" : ""
+                        }`}
+                        style={{
+                          backgroundColor: getColor(item.node.kind),
+                          left: `${item.startPercent}%`,
+                          width: `${item.widthPercent}%`,
+                        }}
+                        title={`${item.node.name} • ${formatDuration(item.node.durationMs)} • $${item.node.costUsd.toFixed(4)} • ${item.node.tokens} tokens`}
+                      >
+                        <span>{label}</span>
+                        <div class="fg-tooltip">
+                          {item.node.name} • {formatDuration(item.node.durationMs)} •
+                          ${item.node.costUsd.toFixed(4)}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
+        </div>
+
+        <div class="fg-legend">
+          <div class="fg-legend-item">
+            <div class="fg-legend-dot" style={{ backgroundColor: "#8b5cf6" }}></div>
+            <span>session</span>
+          </div>
+          <div class="fg-legend-item">
+            <div class="fg-legend-dot" style={{ backgroundColor: "#6366f1" }}></div>
+            <span>turn</span>
+          </div>
+          <div class="fg-legend-item">
+            <div class="fg-legend-dot" style={{ backgroundColor: "#3b82f6" }}></div>
+            <span>llm_call</span>
+          </div>
+          <div class="fg-legend-item">
+            <div class="fg-legend-dot" style={{ backgroundColor: "#f97316" }}></div>
+            <span>tool_exec</span>
+          </div>
+          <div class="fg-legend-item">
+            <div class="fg-legend-dot" style={{ backgroundColor: "#10b981" }}></div>
+            <span>context_build</span>
+          </div>
         </div>
       </>
     )
