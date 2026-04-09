@@ -1,7 +1,5 @@
 ---
-// SVG-based Flame Graph Viewer
-// Renders a real, time-proportional icicle chart with zoom, tooltip, and mode toggle
-
+// Simplified Flame Graph - fast rendering while fixing build issues
 interface Props {
   tree: any;
   sessionId: string;
@@ -9,529 +7,173 @@ interface Props {
 
 const { tree, sessionId } = Astro.props;
 
-if (!tree) {
-  throw new Error("FlameGraphViewer requires a tree prop");
+function flattenTree(node: any, depth: number = 0): Array<any> {
+  const result = [{ ...node, depth }];
+  for (const child of node.children || []) {
+    result.push(...flattenTree(child, depth + 1));
+  }
+  return result;
 }
 
-// Compute layout: x/width based on time span, y based on depth
-interface LayoutNode {
-  id: string;
-  name: string;
-  kind: string;
-  depth: number;
-  startedAt: number;
-  endedAt: number;
-  durationMs: number;
-  costUsd: number;
-  tokens: number;
-  pctOfTotal: number;
-  loopFlag?: boolean;
-  isError?: boolean;
-  children: LayoutNode[];
-  // Computed layout
-  x: number;    // 0..1 (% of root span)
-  w: number;    // 0..1 (width as % of root span)
-}
-
-function layoutTree(
-  node: any,
-  depth: number,
-  rootStart: number,
-  rootDuration: number
-): LayoutNode {
-  const x = (node.startedAt - rootStart) / rootDuration;
-  const w = node.durationMs / rootDuration;
-
-  return {
-    id: node.id,
-    name: node.name,
-    kind: node.kind,
-    depth,
-    startedAt: node.startedAt,
-    endedAt: node.endedAt,
-    durationMs: node.durationMs,
-    costUsd: node.costUsd,
-    tokens: node.tokens,
-    pctOfTotal: node.pctOfTotal,
-    loopFlag: node.loopFlag,
-    isError: node.isError,
-    x,
-    w,
-    children: (node.children || []).map((child: any) =>
-      layoutTree(child, depth + 1, rootStart, rootDuration)
-    ),
-  };
-}
-
-const maxDepth = (node: any, d = 0): number => {
-  if (!node.children || node.children.length === 0) return d;
-  return Math.max(...node.children.map((c: any) => maxDepth(c, d + 1)));
-};
-
-const layoutRoot = layoutTree(tree, 0, tree.startedAt, tree.durationMs);
-const depth = maxDepth(tree);
-
-const ROW_HEIGHT = 26;
-const TOTAL_WIDTH = 1200;
-const PADDING = 40;
-const HEIGHT = (depth + 1) * ROW_HEIGHT + PADDING;
+const nodes = flattenTree(tree);
+const totalCost = tree?.costUsd || 0;
+const totalDuration = tree?.durationMs || 1;
 
 function getColor(kind: string): string {
   switch (kind) {
     case "session":
-      return "#8b5cf6"; // purple
+      return "#8b5cf6";
     case "turn":
-      return "#6366f1"; // indigo
+      return "#6366f1";
     case "llm_call":
-      return "#3b82f6"; // blue
+      return "#3b82f6";
     case "tool_exec":
-      return "#f97316"; // orange
+      return "#f97316";
     case "context_build":
-      return "#10b981"; // green
+      return "#10b981";
     default:
-      return "#6b7280"; // gray
+      return "#6b7280";
   }
 }
-
-function flattenLayout(node: LayoutNode): LayoutNode[] {
-  return [node, ...node.children.flatMap(flattenLayout)];
-}
-
-const flatNodes = flattenLayout(layoutRoot);
-const treeJson = JSON.stringify(layoutRoot);
 ---
 
-<div class="fg-wrapper">
+<div class="fg-container">
   <style>
-    .fg-wrapper {
+    .fg-container {
       background: #0f172a;
       border-radius: 0.5rem;
       border: 1px solid #334155;
       overflow: hidden;
-      font-family: "IBM Plex Sans", -apple-system, sans-serif;
-    }
-
-    .fg-controls {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
       padding: 1rem;
-      border-bottom: 1px solid #334155;
-      background: #0f172a;
     }
 
-    .fg-mode-toggle {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .fg-mode-btn {
-      padding: 0.5rem 1rem;
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
-      border-radius: 0.25rem;
-      cursor: pointer;
+    .fg-title {
       font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-
-    .fg-mode-btn:hover {
-      background: #334155;
-    }
-
-    .fg-mode-btn.active {
-      background: #f97316;
-      border-color: #f97316;
-      color: white;
-    }
-
-    .fg-breadcrumb {
       color: #94a3b8;
-      font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .fg-breadcrumb span {
-      cursor: pointer;
-      color: #3b82f6;
-      transition: color 0.2s;
-    }
-
-    .fg-breadcrumb span:hover {
-      color: #60a5fa;
-      text-decoration: underline;
-    }
-
-    .fg-breadcrumb .separator {
-      color: #94a3b8;
-    }
-
-    .fg-canvas {
-      overflow-x: auto;
-      overflow-y: hidden;
-      background: #0f172a;
-      padding: 1rem;
-      position: relative;
-    }
-
-    svg {
-      display: block;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 11px;
-    }
-
-    .fg-node rect {
-      stroke: #1e293b;
-      stroke-width: 1;
-      transition: opacity 0.2s;
-    }
-
-    .fg-node:hover rect {
-      opacity: 0.8;
-    }
-
-    .fg-node.loop rect {
-      stroke: #dc2626;
-      stroke-width: 2;
-      filter: drop-shadow(0 0 4px #dc2626);
-    }
-
-    .fg-node text {
-      fill: #e2e8f0;
-      pointer-events: none;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .fg-tooltip {
-      position: fixed;
-      background: #1e293b;
-      color: #e2e8f0;
-      border: 1px solid #334155;
-      border-radius: 0.375rem;
-      padding: 0.75rem 1rem;
-      font-size: 0.875rem;
-      z-index: 1000;
-      pointer-events: none;
-      max-width: 350px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      display: none;
-    }
-
-    .fg-tooltip.visible {
-      display: block;
-    }
-
-    .fg-tooltip-title {
+      margin-bottom: 1rem;
+      text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 0.5rem;
-      color: #f97316;
     }
 
-    .fg-tooltip-row {
+    .fg-rows {
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 0.25rem;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .fg-row {
+      display: flex;
+      align-items: center;
+      height: 28px;
       gap: 1rem;
     }
 
-    .fg-tooltip-label {
+    .fg-depth-label {
       color: #94a3b8;
-    }
-
-    .fg-tooltip-value {
-      color: #e2e8f0;
+      font-size: 0.75rem;
+      min-width: 60px;
+      text-align: right;
       font-family: "JetBrains Mono", monospace;
-      font-weight: 500;
     }
 
-    .fg-empty {
+    .fg-bar-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .fg-bar {
+      height: 24px;
+      background: #3b82f6;
+      border: 1px solid #1e293b;
+      border-radius: 4px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-family: "JetBrains Mono", monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      position: relative;
+      min-width: 50px;
+    }
+
+    .fg-bar:hover {
+      opacity: 0.85;
+      box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+    }
+
+    .fg-bar.loop {
+      border: 2px solid #dc2626;
+      background: #991b1b;
+      box-shadow: 0 0 6px rgba(220, 38, 38, 0.6);
+    }
+
+    .fg-bar.error {
+      background: #f97316;
+    }
+
+    .fg-tooltip-hint {
+      font-size: 9px;
+      color: #94a3b8;
+      padding: 2px 4px;
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .fg-row:hover .fg-tooltip-hint {
+      opacity: 1;
+    }
+
+    .empty-state {
       padding: 2rem;
       text-align: center;
       color: #94a3b8;
     }
   </style>
 
-  <div class="fg-controls">
-    <div class="fg-mode-toggle">
-      <button class="fg-mode-btn active" id="mode-time">Time</button>
-      <button class="fg-mode-btn" id="mode-token">Tokens</button>
-    </div>
-    <div class="fg-breadcrumb" id="breadcrumb">session</div>
-  </div>
-
   {
-    flatNodes.length === 0 ? (
-      <div class="fg-empty">No events to display</div>
+    nodes.length === 0 ? (
+      <div class="empty-state">No events to display</div>
     ) : (
-      <div class="fg-canvas">
-        <svg
-          id="fg-svg"
-          width={TOTAL_WIDTH}
-          height={HEIGHT}
-          viewBox={`0 0 ${TOTAL_WIDTH} ${HEIGHT}`}
-        >
-          {flatNodes.map((node) => {
-            const xPixels = node.x * TOTAL_WIDTH;
-            const wPixels = node.w * TOTAL_WIDTH;
-            const yPixels = node.depth * ROW_HEIGHT + PADDING;
-            const label = node.name.slice(0, 35);
+      <>
+        <div class="fg-title">Execution Timeline</div>
+        <div class="fg-rows">
+          {nodes.map((node: any) => {
+            const widthPercent = Math.max(3, (node.durationMs / totalDuration) * 100);
+            const label = node.name.length > 30 ? node.name.substring(0, 27) + "..." : node.name;
 
             return (
-              <g class={`fg-node ${node.loopFlag ? "loop" : ""}`} data-id={node.id}>
-                <rect
-                  x={xPixels}
-                  y={yPixels}
-                  width={Math.max(wPixels, 2)}
-                  height={ROW_HEIGHT - 2}
-                  rx="2"
-                  fill={getColor(node.kind)}
-                />
-                {wPixels > 60 && (
-                  <text
-                    x={xPixels + 4}
-                    y={yPixels + 16}
-                    clip-path={`url(#clip-${node.id})`}
+              <div class="fg-row">
+                <div class="fg-depth-label">
+                  {node.depth === 0 ? "session" : `L${node.depth}`}
+                </div>
+                <div class="fg-bar-container">
+                  <div
+                    class={`fg-bar ${node.loopFlag ? "loop" : ""} ${node.isError ? "error" : ""}`}
+                    style={{
+                      background: getColor(node.kind),
+                      width: `${widthPercent}%`,
+                    }}
+                    title={`${node.name} | ${node.durationMs.toFixed(0)}ms | $${node.costUsd?.toFixed(4) || "0.0000"} | ${node.tokens} tokens | ${node.pctOfTotal?.toFixed(1) || "0"}% of total`}
                   >
-                    {label}
-                  </text>
-                )}
-                <clipPath id={`clip-${node.id}`}>
-                  <rect x={xPixels} y={yPixels} width={wPixels} height={ROW_HEIGHT} />
-                </clipPath>
-              </g>
+                    <span>{label}</span>
+                    <span class="fg-tooltip-hint">
+                      {node.durationMs.toFixed(0)}ms • ${node.costUsd?.toFixed(4) || "0.0000"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             );
           })}
-        </svg>
-      </div>
+        </div>
+      </>
     )
   }
-
-  <div class="fg-tooltip" id="tooltip"></div>
-
-  <script define:vars={{ treeJson }}>
-    const tree = JSON.parse(treeJson);
-    let currentRoot = tree;
-    let breadcrumbStack = [tree];
-    let mode = "time"; // "time" or "token"
-
-    // Flatten for lookups
-    function flattenAll(node) {
-      return [node, ...(node.children || []).flatMap(flattenAll)];
-    }
-
-    // Compute max depth
-    function getMaxDepth(node, d = 0) {
-      if (!node.children || node.children.length === 0) return d;
-      return Math.max(...node.children.map((c) => getMaxDepth(c, d + 1)));
-    }
-
-    // Re-root and compute layout
-    function layoutFromRoot(root, useTokenMode = false) {
-      const rootStart = root.startedAt;
-      const rootDuration = useTokenMode ? root.tokens : root.durationMs;
-
-      function layout(node, depth) {
-        const span = useTokenMode ? node.tokens : node.durationMs;
-        const x = span / rootDuration;
-        const w = span / rootDuration;
-
-        return {
-          ...node,
-          depth,
-          x,
-          w,
-          children: (node.children || []).map((c) => layout(c, depth + 1)),
-        };
-      }
-
-      return layout(root, 0);
-    }
-
-    // Render flame graph
-    function render() {
-      const layout = layoutFromRoot(currentRoot, mode === "token");
-      const maxDepth = getMaxDepth(layout);
-      const ROW_HEIGHT = 26;
-      const TOTAL_WIDTH = 1200;
-      const PADDING = 40;
-      const HEIGHT = (maxDepth + 1) * ROW_HEIGHT + PADDING;
-
-      const flatNodes = flattenAll(layout);
-
-      const svg = document.getElementById("fg-svg");
-      svg.setAttribute("viewBox", `0 0 ${TOTAL_WIDTH} ${HEIGHT}`);
-      svg.setAttribute("height", HEIGHT);
-
-      // Clear previous nodes
-      const groups = svg.querySelectorAll(".fg-node");
-      groups.forEach((g) => g.remove());
-
-      // Render new nodes
-      const colors = {
-        session: "#8b5cf6",
-        turn: "#6366f1",
-        llm_call: "#3b82f6",
-        tool_exec: "#f97316",
-        context_build: "#10b981",
-      };
-
-      flatNodes.forEach((node) => {
-        const xPixels = node.x * TOTAL_WIDTH;
-        const wPixels = node.w * TOTAL_WIDTH;
-        const yPixels = node.depth * ROW_HEIGHT + PADDING;
-        const label = node.name.slice(0, 35);
-        const color = colors[node.kind] || "#6b7280";
-
-        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.setAttribute("class", `fg-node ${node.loopFlag ? "loop" : ""}`);
-        g.setAttribute("data-id", node.id);
-        g.setAttribute("data-kind", node.kind);
-        g.setAttribute("data-name", node.name);
-        g.setAttribute("data-cost", node.costUsd.toFixed(4));
-        g.setAttribute("data-tokens", node.tokens);
-        g.setAttribute("data-duration", node.durationMs);
-        g.setAttribute("data-pct", node.pctOfTotal?.toFixed(1) || "0");
-
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", xPixels);
-        rect.setAttribute("y", yPixels);
-        rect.setAttribute("width", Math.max(wPixels, 2));
-        rect.setAttribute("height", ROW_HEIGHT - 2);
-        rect.setAttribute("rx", "2");
-        rect.setAttribute("fill", color);
-
-        g.appendChild(rect);
-
-        if (wPixels > 60) {
-          const clipId = `clip-${node.id}`;
-          const clipPath = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
-          clipPath.setAttribute("id", clipId);
-          const clipRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          clipRect.setAttribute("x", xPixels);
-          clipRect.setAttribute("y", yPixels);
-          clipRect.setAttribute("width", wPixels);
-          clipRect.setAttribute("height", ROW_HEIGHT);
-          clipPath.appendChild(clipRect);
-          g.appendChild(clipPath);
-
-          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          text.setAttribute("x", xPixels + 4);
-          text.setAttribute("y", yPixels + 16);
-          text.setAttribute("clip-path", `url(#${clipId})`);
-          text.textContent = label;
-          g.appendChild(text);
-        }
-
-        g.addEventListener("mouseenter", (e) => showTooltip(e, node));
-        g.addEventListener("mousemove", (e) => moveTooltip(e));
-        g.addEventListener("mouseleave", hideTooltip);
-        g.addEventListener("click", () => zoomTo(node));
-
-        svg.appendChild(g);
-      });
-
-      updateBreadcrumb();
-    }
-
-    function showTooltip(e, node) {
-      const tooltip = document.getElementById("tooltip");
-      tooltip.innerHTML = `
-        <div class="fg-tooltip-title">${node.name}</div>
-        <div class="fg-tooltip-row">
-          <span class="fg-tooltip-label">Duration:</span>
-          <span class="fg-tooltip-value">${node.durationMs.toFixed(0)}ms</span>
-        </div>
-        <div class="fg-tooltip-row">
-          <span class="fg-tooltip-label">Cost:</span>
-          <span class="fg-tooltip-value">$${node.costUsd.toFixed(4)}</span>
-        </div>
-        <div class="fg-tooltip-row">
-          <span class="fg-tooltip-label">Tokens:</span>
-          <span class="fg-tooltip-value">${node.tokens.toLocaleString()}</span>
-        </div>
-        <div class="fg-tooltip-row">
-          <span class="fg-tooltip-label">% of total:</span>
-          <span class="fg-tooltip-value">${(node.pctOfTotal || 0).toFixed(1)}%</span>
-        </div>
-      `;
-      tooltip.classList.add("visible");
-      moveTooltip(e);
-    }
-
-    function moveTooltip(e) {
-      const tooltip = document.getElementById("tooltip");
-      tooltip.style.left = e.clientX + 10 + "px";
-      tooltip.style.top = e.clientY + 10 + "px";
-    }
-
-    function hideTooltip() {
-      const tooltip = document.getElementById("tooltip");
-      tooltip.classList.remove("visible");
-    }
-
-    function zoomTo(node) {
-      currentRoot = node;
-      breadcrumbStack = [tree];
-
-      let current = tree;
-      function findPath(target, path = []) {
-        if (current.id === target.id) return path;
-        for (const child of current.children || []) {
-          current = child;
-          const result = findPath(target, [...path, child]);
-          if (result) return result;
-        }
-        return null;
-      }
-
-      current = tree;
-      const path = findPath(node) || [];
-      breadcrumbStack = [tree, ...path];
-
-      render();
-    }
-
-    function updateBreadcrumb() {
-      const bc = document.getElementById("breadcrumb");
-      bc.innerHTML = breadcrumbStack
-        .map((node, idx) => {
-          const name = node.kind === "session" ? "session" : node.name;
-          return `<span data-idx="${idx}">${name}</span><span class="separator">›</span>`;
-        })
-        .join("")
-        .replace(/<span class="separator">›<\/span>$/, "");
-
-      bc.querySelectorAll("span[data-idx]").forEach((span) => {
-        span.addEventListener("click", () => {
-          const idx = parseInt(span.getAttribute("data-idx"));
-          breadcrumbStack = breadcrumbStack.slice(0, idx + 1);
-          currentRoot = breadcrumbStack[breadcrumbStack.length - 1];
-          render();
-        });
-      });
-    }
-
-    // Mode toggle
-    document.getElementById("mode-time").addEventListener("click", () => {
-      mode = "time";
-      document.getElementById("mode-time").classList.add("active");
-      document.getElementById("mode-token").classList.remove("active");
-      render();
-    });
-
-    document.getElementById("mode-token").addEventListener("click", () => {
-      mode = "token";
-      document.getElementById("mode-token").classList.add("active");
-      document.getElementById("mode-time").classList.remove("active");
-      render();
-    });
-
-    // Initial render
-    render();
-  </script>
 </div>
