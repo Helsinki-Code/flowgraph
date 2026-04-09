@@ -45,3 +45,7 @@ jobs:
           TEST_SESSION_ID: ${{ secrets.TEST_SESSION_ID }}
           BASE_URL: https://eddieai.online
           SERVER_URL: https://flowgraph-n8xj.onrender.com
+
+      - name: Lighthouse CI
+        run: npx lhci autorun
+        continue-on-error: true
