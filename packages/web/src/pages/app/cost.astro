@@ -1,0 +1,169 @@
+---
+export const prerender = false;
+
+import Dashboard from "../../layouts/Dashboard.astro";
+import { API_URL } from "../../lib/api";
+import { fetchJsonWithTimeout } from "../../lib/server-fetch";
+
+let userId, orgId, token;
+try {
+  if (!Astro.locals?.auth) {
+    return Astro.redirect("/sign-in");
+  }
+
+  const auth = Astro.locals.auth();
+  userId = auth?.userId;
+  orgId = auth?.orgId;
+  token = auth?.getToken ? await auth.getToken() : null;
+
+  if (!userId) {
+    return Astro.redirect("/sign-in");
+  }
+} catch (e) {
+  console.error("Auth error in /app/cost:", e);
+  return Astro.redirect("/sign-in");
+}
+
+const workspaceId = orgId || userId;
+const groupBy = new URL(Astro.request.url).searchParams.get("group_by") || "tool";
+let breakdown = {};
+let error = null;
+
+if (workspaceId && token) {
+  try {
+    const response = await fetchJsonWithTimeout<{ breakdown: Record<string, any> }>(
+      `${API_URL}/v1/cost/breakdown?workspace_id=${workspaceId}&group_by=${groupBy}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeoutMs: 8000,
+        retries: 1,
+      }
+    );
+    breakdown = response.breakdown || {};
+  } catch (e: any) {
+    error = `Failed to load cost breakdown: ${e.message}`;
+  }
+} else {
+  error = "Missing authentication data";
+}
+
+const items = Object.entries(breakdown)
+  .map(([key, value]: any) => ({
+    name: key,
+    cost: value.cost || 0,
+    tokens: value.tokens || 0,
+    count: value.count || 0,
+  }))
+  .sort((a, b) => b.cost - a.cost);
+
+const totalCost = items.reduce((sum, item) => sum + item.cost, 0);
+---
+
+<Dashboard title="Cost Analysis" description="AI token and API cost attribution by tool, model, feature">
+  {
+    error && (
+      <div
+        style={{
+          padding: "1rem",
+          borderRadius: "0.375rem",
+          background: "#7f1d1d",
+          color: "#fca5a5",
+          marginBottom: "1.5rem",
+        }}
+      >
+        {error}
+      </div>
+    )
+  }
+
+  <div style={{ marginBottom: "2rem" }}>
+    <label style={{ display: "block", marginBottom: "0.5rem", color: "#cbd5e1" }}>
+      Group By:
+    </label>
+    <select
+      style={{
+        padding: "0.5rem 1rem",
+        background: "#1e293b",
+        color: "#e2e8f0",
+        border: "1px solid #334155",
+        borderRadius: "0.375rem",
+        cursor: "pointer",
+      }}
+      onchange="location.href = '/app/cost?group_by=' + this.value"
+    >
+      <option value="tool" selected={groupBy === "tool"}>Tool</option>
+      <option value="model" selected={groupBy === "model"}>Model</option>
+      <option value="feature" selected={groupBy === "feature"}>Feature</option>
+      <option value="engineer" selected={groupBy === "engineer"}>Engineer</option>
+    </select>
+  </div>
+
+  <div
+    style={{
+      background: "#1e293b",
+      borderRadius: "0.5rem",
+      border: "1px solid #334155",
+      overflow: "hidden",
+    }}
+  >
+    <div style={{ padding: "1.5rem", borderBottom: "1px solid #334155" }}>
+      <h2 style={{ fontSize: "1.25rem", fontWeight: "600" }}>Costs by {groupBy}</h2>
+    </div>
+
+    {items.length === 0 ? (
+      <div style={{ padding: "2rem", textAlign: "center", color: "#94a3b8" }}>
+        No data yet.
+      </div>
+    ) : (
+      <div>
+        {items.map((item) => (
+          <div
+            style={{
+              padding: "1rem 1.5rem",
+              borderBottom: "1px solid #334155",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: "600", marginBottom: "0.25rem" }}>{item.name}</div>
+              <div style={{ fontSize: "0.875rem", color: "#94a3b8" }}>
+                {item.count} events • {item.tokens.toLocaleString()} tokens
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "1.25rem", fontWeight: "700" }}>
+                ${item.cost.toFixed(4)}
+              </div>
+              <div style={{ fontSize: "0.875rem", color: "#94a3b8" }}>
+                {totalCost > 0 ? ((item.cost / totalCost) * 100).toFixed(1) : "0"}% of total
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div
+          style={{
+            padding: "1.5rem",
+            background: "#0f172a",
+            borderTop: "2px solid #334155",
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span style={{ fontWeight: "600" }}>Total</span>
+          <span style={{ fontSize: "1.5rem", fontWeight: "700" }}>
+            ${totalCost.toFixed(4)}
+          </span>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div style={{ marginTop: "2rem", padding: "1rem", background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155", color: "#94a3b8", fontSize: "0.875rem" }}>
+    💡 Tip: Use these breakdowns to identify which tools, models, or features are consuming the most tokens and budget. Optimize your agent prompts or tool usage to reduce costs.
+  </div>
+</Dashboard>
