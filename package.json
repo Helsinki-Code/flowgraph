@@ -18,7 +18,10 @@
     "build:server": "npm --prefix packages/storage run build && npm --prefix packages/sdk run build && npm --prefix packages/server run build",
     "build:web": "npm --prefix packages/web run build",
     "dev": "npm run dev --workspace=packages/server",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "secret:scan": "node scripts/secret-scan.mjs",
+    "prepare": "node scripts/setup-hooks.mjs",
+    "test:ci": "npm run secret:scan && npm run test && npm run build:server && npm run build:web"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -33,9 +36,9 @@
   },
   "dependencies": {
     "@astrojs/node": "^10.0.4",
+    "@flamegraph/sdk": "*",
     "astro": "^6.1.5",
     "emoji-regex-xs": "^2.0.1",
-    "flamegraph-sdk": "^0.1.0",
     "nanostores": "^1.2.0",
     "ulid": "^2.3.0"
   }

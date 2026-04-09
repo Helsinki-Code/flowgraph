@@ -13,7 +13,8 @@
   },
   "files": ["dist", "src"],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node test/smoke.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.5.2"

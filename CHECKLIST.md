@@ -1,6 +1,6 @@
 # Token Flame Graph — Build Checklist ✅
 
-Everything needed for a production-ready AI SaaS is complete.
+Security and GA hardening checklist for production launch.
 
 ## Core SDK ✅
 
@@ -15,7 +15,7 @@ Everything needed for a production-ready AI SaaS is complete.
 
 ## Storage Layer ✅
 
-- [x] SQLite adapter for development (`sqlite-store.ts`)
+- [ ] SQLite adapter for development (`sqlite-store.ts`) — currently stubbed
 - [x] SQL schema (SQLite + PostgreSQL compatible)
 - [x] Session CRUD operations
 - [x] Event insertion and querying
@@ -98,8 +98,8 @@ Everything needed for a production-ready AI SaaS is complete.
 
 ## What's NOT Included (Intentional)
 
-- [ ] Clerk authentication (schema ready, needs implementation)
-- [ ] Stripe webhook handling (schema ready, routes need implementation)
+- [x] Clerk authentication
+- [x] Stripe webhook signature verification and basic subscription handling
 - [ ] PostgreSQL adapter (schema is compatible, just needs instantiation)
 - [ ] Alert execution (config UI ready, webhook delivery not implemented)
 - [ ] Session export (CSV, JSON — easy to add)
@@ -174,4 +174,4 @@ Total Files:               35+ TypeScript/config files
 
 ---
 
-**Status: MVP ready. All core features implemented. Ready for beta launch. 🚀**
+**Status: Hardening in progress. Use this checklist as a release gate before GA.**

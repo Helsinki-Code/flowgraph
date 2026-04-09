@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Dashboard from "../../layouts/Dashboard.astro";
 import { API_URL } from "../../lib/api";
+import { fetchJsonWithTimeout } from "../../lib/server-fetch";
 
 let userId, orgId, token;
 try {
@@ -25,6 +26,23 @@ try {
 
 const workspaceId = orgId || userId;
 let error = null;
+let apiKeys: Array<{ id: string; created_at: number; last_used_at?: number }> = [];
+
+if (token) {
+  try {
+    const data = await fetchJsonWithTimeout<{ apiKeys: Array<{ id: string; created_at: number; last_used_at?: number }> }>(
+      `${API_URL}/v1/workspace/api-keys`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        timeoutMs: 8000,
+        retries: 1,
+      },
+    );
+    apiKeys = data.apiKeys || [];
+  } catch (e: any) {
+    error = `Failed to load API keys: ${e.message}`;
+  }
+}
 ---
 
 <Dashboard title="Settings" description="API keys and workspace configuration">
@@ -98,6 +116,29 @@ let error = null;
           ⚠️ <strong>Security:</strong> This key is shown only once. Store it securely (e.g., `.env` file). If you lose it, generate a new one.
         </div>
       </div>
+
+      <div style={{ marginTop: "1.5rem" }}>
+        <h4 style={{ marginBottom: "0.75rem", fontSize: "1rem" }}>Existing Keys</h4>
+        {apiKeys.length === 0 ? (
+          <div style={{ color: "#94a3b8", fontSize: "0.9rem" }}>No active keys yet.</div>
+        ) : (
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            {apiKeys.map((key) => (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0f172a", border: "1px solid #334155", borderRadius: "0.375rem", padding: "0.75rem 1rem" }}>
+                <div>
+                  <div style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.8rem", color: "#cbd5e1" }}>{key.id}</div>
+                  <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Created {new Date(key.created_at).toLocaleString()} {key.last_used_at ? `• Last used ${new Date(key.last_used_at).toLocaleString()}` : "• Never used"}
+                  </div>
+                </div>
+                <button type="button" class="revoke-key-btn" data-key-id={key.id} style={{ padding: "0.4rem 0.8rem", borderRadius: "0.25rem", border: "1px solid #7f1d1d", background: "#7f1d1d", color: "#fecaca", fontSize: "0.75rem", cursor: "pointer" }}>
+                  Revoke
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
 
     <!-- Integration Section -->
@@ -137,7 +178,7 @@ let error = null;
           Copy
         </button>
         <pre style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.875rem", color: "#e2e8f0", margin: 0, overflow: "auto", whiteSpace: "pre-wrap", wordWrap: "break-word", paddingRight: "100px" }}>
-{`import { LocalCollector } from "flamegraph-sdk";
+{`import { LocalCollector } from "@flamegraph/sdk";
 
 instrumentAgent(agent, {
   collector: new LocalCollector({
@@ -218,7 +259,7 @@ instrumentAgent(agent, {
     });
 
     copyCodeBtn.addEventListener("click", async () => {
-      const codeText = `import { LocalCollector } from "flamegraph-sdk";\n\ninstrumentAgent(agent, {\n  collector: new LocalCollector({\n    serverUrl: "${API_URL}",\n    apiKey: "sk_your_key_here" // from Settings\n  })\n});`;
+      const codeText = `import { LocalCollector } from "@flamegraph/sdk";\n\ninstrumentAgent(agent, {\n  collector: new LocalCollector({\n    serverUrl: "${API_URL}",\n    apiKey: "sk_your_key_here" // from Settings\n  })\n});`;
 
       try {
         await navigator.clipboard.writeText(codeText);
@@ -230,6 +271,31 @@ instrumentAgent(agent, {
       } catch (err) {
         alert("Failed to copy");
       }
+    });
+
+    document.querySelectorAll(".revoke-key-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const keyId = button.getAttribute("data-key-id");
+        if (!keyId) return;
+        if (!confirm("Revoke this API key? This action cannot be undone.")) return;
+
+        try {
+          const response = await fetch(`${API_URL}/v1/workspace/api-keys/${keyId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (!response.ok) {
+            const errText = await response.text();
+            alert(`Failed to revoke key: ${errText}`);
+            return;
+          }
+          location.reload();
+        } catch (err) {
+          alert("Failed to revoke key");
+        }
+      });
     });
   </script>
 </Dashboard>

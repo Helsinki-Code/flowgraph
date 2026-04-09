@@ -65,10 +65,8 @@ export interface FlameNode {
 }
 
 export const api = {
-  getSessions: (workspaceId: string, limit = 100, offset = 0) =>
-    request<{ sessions: Session[] }>(
-      `/v1/sessions?workspace_id=${workspaceId}&limit=${limit}&offset=${offset}`,
-    ),
+  getSessions: (limit = 100, offset = 0, token?: string) =>
+    request<{ sessions: Session[] }>(`/v1/sessions?limit=${limit}&offset=${offset}`, { token }),
 
   getSession: (sessionId: string) =>
     request<{ session: Session; events: any[] }>(`/v1/sessions/${sessionId}`),
@@ -76,10 +74,8 @@ export const api = {
   getFlameGraph: (sessionId: string) =>
     request<{ tree: FlameNode; metrics: any }>(`/v1/sessions/${sessionId}/flamegraph`),
 
-  getCostBreakdown: (workspaceId: string, groupBy = "tool") =>
-    request<{ breakdown: Record<string, any>; groupBy: string }>(
-      `/v1/cost/breakdown?workspace_id=${workspaceId}&group_by=${groupBy}`,
-    ),
+  getCostBreakdown: (groupBy = "tool", token?: string) =>
+    request<{ breakdown: Record<string, any>; groupBy: string }>(`/v1/cost/breakdown?group_by=${groupBy}`, { token }),
 
   getHealth: () => request<{ ok: boolean }>("/health"),
 };

@@ -12,4 +12,5 @@ export {
   type QueryEvent,
   type QueryWorkspace,
   type QueryAlert,
+  type QueryApiKey,
 } from "./schema.js";

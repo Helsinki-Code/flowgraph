@@ -193,7 +193,7 @@ import { LocalCollector } from "@flamegraph/sdk";
 
 // Create collector that posts to Flame Graph server
 const collector = new LocalCollector({
-  serverUrl: "https://flowgraph-n8xj.onrender.com",
+  serverUrl: process.env.FLAMEGRAPH_SERVER_URL,
   apiKey: "sk_...", // Get from dashboard
 });
 
@@ -212,8 +212,7 @@ await agent.run("What's the weather?");`}</code>
       <ul class="docs-list">
         <li><strong>serverUrl</strong> (required) - URL to your Flame Graph server</li>
         <li><strong>apiKey</strong> (optional) - API key from dashboard (for authentication)</li>
-        <li><strong>flushInterval</strong> - How often to batch-send events (default: 5000ms)</li>
-        <li><strong>maxBatchSize</strong> - Events per batch (default: 100)</li>
+        <li><strong>autoFlushIntervalMs</strong> - Optional interval for automatic batching</li>
       </ul>
     </section>
 

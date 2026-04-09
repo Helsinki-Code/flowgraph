@@ -27,19 +27,28 @@ export interface FlameNode {
  * Events must be sorted by startedAt ascending
  */
 export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
-  if (events.length === 0) return null;
+  const validEvents = (events || []).filter(
+    (event) =>
+      typeof event?.id === "string" &&
+      event.id.length > 0 &&
+      typeof event.session_id === "string" &&
+      typeof event.started_at === "number",
+  );
+  if (validEvents.length === 0) return null;
+
+  validEvents.sort((a, b) => a.started_at - b.started_at);
 
   // Find the root session event, or create synthetic root from event bounds
-  let sessionEvent = events.find((e) => e.kind === "session");
+  let sessionEvent = validEvents.find((e) => e.kind === "session" && !e.parent_id);
   if (!sessionEvent) {
     // Create synthetic root from first and last event timestamps
-    const minStart = Math.min(...events.map((e) => e.started_at));
-    const maxEnd = Math.max(...events.map((e) => e.ended_at || e.started_at));
+    const minStart = Math.min(...validEvents.map((e) => e.started_at));
+    const maxEnd = Math.max(...validEvents.map((e) => e.ended_at || e.started_at));
     sessionEvent = {
       id: "synthetic-root",
-      session_id: events[0].session_id,
+      session_id: validEvents[0].session_id,
       parent_id: undefined,
-      workspace_id: events[0].workspace_id,
+      workspace_id: validEvents[0].workspace_id,
       kind: "session",
       started_at: minStart,
       ended_at: maxEnd,
@@ -92,7 +101,7 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
   }
 
   // First pass: create all nodes
-  for (const event of events) {
+  for (const event of validEvents) {
     const durationMs = (event.ended_at || Date.now()) - event.started_at;
     const costUsd = event.cost_usd || 0;
     const tokens =
@@ -106,7 +115,16 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
 
     let name = event.kind;
     if (event.kind === "turn") {
-      name = `turn:${event.metadata ? JSON.parse(event.metadata).turnIndex : "?"}`;
+      let turnIndex: string | number = "?";
+      if (event.metadata) {
+        try {
+          const parsed = JSON.parse(event.metadata);
+          turnIndex = parsed?.turnIndex ?? "?";
+        } catch {
+          turnIndex = "?";
+        }
+      }
+      name = `turn:${turnIndex}`;
     } else if (event.kind === "tool_exec") {
       name = event.tool_name || "unknown_tool";
     } else if (event.kind === "llm_call") {
@@ -135,24 +153,33 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
   }
 
   // Second pass: link parent-child relationships
-  for (const event of events) {
+  for (const event of validEvents) {
     const node = nodeMap.get(event.id)!;
+    if (!node) continue;
+    if (event.id === sessionEvent.id && !isRootSynthetic) {
+      continue;
+    }
     if (event.parent_id) {
       const parent = nodeMap.get(event.parent_id);
       if (parent) {
         parent.children.push(node);
+      } else {
+        const rootNode = nodeMap.get(sessionEvent.id);
+        if (rootNode) {
+          rootNode.children.push(node);
+        }
       }
-    } else if (isRootSynthetic) {
-      // Link orphan nodes to synthetic root
-      const syntheticRoot = nodeMap.get("synthetic-root");
-      if (syntheticRoot) {
-        syntheticRoot.children.push(node);
+    } else {
+      const rootNode = nodeMap.get(sessionEvent.id);
+      if (rootNode && node.id !== rootNode.id) {
+        rootNode.children.push(node);
       }
     }
   }
 
   // Third pass: compute percentages and detect loops
-  const root = nodeMap.get(sessionEvent.id)!;
+  const root = nodeMap.get(sessionEvent.id);
+  if (!root) return null;
   computePercentages(root, totalCostUsd || 1);
   detectLoops(root);
 
@@ -207,10 +234,14 @@ export function computeTreeMetrics(
 
   let maxDepth = 0;
   let nodeCount = 0;
+  let totalCost = 0;
+  let totalTokens = 0;
 
   function visit(node: FlameNode, depth: number): void {
     maxDepth = Math.max(maxDepth, depth);
     nodeCount++;
+    totalCost += node.costUsd || 0;
+    totalTokens += node.tokens || 0;
     for (const child of node.children) {
       visit(child, depth + 1);
     }
@@ -219,8 +250,8 @@ export function computeTreeMetrics(
   visit(root, 0);
 
   return {
-    totalCost: root.costUsd,
-    totalTokens: root.tokens,
+    totalCost,
+    totalTokens,
     maxDepth,
     nodeCount,
   };

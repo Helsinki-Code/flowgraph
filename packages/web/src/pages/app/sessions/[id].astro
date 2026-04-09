@@ -4,6 +4,7 @@ export const prerender = false;
 import Dashboard from "../../../layouts/Dashboard.astro";
 import FlameGraphViewer from "../../../components/FlameGraphViewer.astro";
 import { API_URL } from "../../../lib/api";
+import { fetchJsonWithTimeout } from "../../../lib/server-fetch";
 
 let userId, orgId, token;
 try {
@@ -32,29 +33,21 @@ let error = null;
 
 if (token) {
   try {
-    const [sessionRes, treeRes] = await Promise.all([
-      fetch(`${API_URL}/v1/sessions/${id}`, {
+    const [sessionData, treeData] = await Promise.all([
+      fetchJsonWithTimeout<{ session: any }>(`${API_URL}/v1/sessions/${id}`, {
         headers: { "Authorization": `Bearer ${token}` },
+        timeoutMs: 8000,
+        retries: 1,
       }),
-      fetch(`${API_URL}/v1/sessions/${id}/flamegraph`, {
+      fetchJsonWithTimeout<{ tree: any; metrics: any }>(`${API_URL}/v1/sessions/${id}/flamegraph`, {
         headers: { "Authorization": `Bearer ${token}` },
+        timeoutMs: 8000,
+        retries: 1,
       }),
     ]);
-
-    if (sessionRes.ok) {
-      const sessionData = await sessionRes.json();
-      session = sessionData.session;
-    } else {
-      error = `Failed to load session: ${sessionRes.status} ${sessionRes.statusText}`;
-    }
-
-    if (treeRes.ok) {
-      const treeData = await treeRes.json();
-      tree = treeData.tree;
-      metrics = treeData.metrics;
-    } else if (!error) {
-      error = `Failed to load flame graph: ${treeRes.status} ${treeRes.statusText}`;
-    }
+    session = sessionData.session;
+    tree = treeData.tree;
+    metrics = treeData.metrics;
   } catch (e: any) {
     error = `Failed to load session: ${e.message}`;
   }

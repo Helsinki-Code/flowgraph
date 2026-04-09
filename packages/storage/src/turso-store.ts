@@ -1,5 +1,11 @@
 import { createClient } from "@libsql/client";
-import { SCHEMA_INIT_SQL, QueryEvent, QuerySession, QueryWorkspace } from "./schema.js";
+import {
+  SCHEMA_INIT_SQL,
+  QueryApiKey,
+  QueryEvent,
+  QuerySession,
+  QueryWorkspace,
+} from "./schema.js";
 
 /**
  * TursoStore — Production database backed by Turso (hosted LibSQL)
@@ -32,6 +38,17 @@ export class TursoStore {
     });
   }
 
+  async updateWorkspacePlan(
+    workspaceId: string,
+    plan: "free" | "pro" | "business",
+    stripeCustomerId?: string,
+  ): Promise<void> {
+    await this.client.execute({
+      sql: `UPDATE workspaces SET plan = ?, stripe_customer_id = COALESCE(?, stripe_customer_id) WHERE id = ?`,
+      args: [plan, stripeCustomerId || null, workspaceId],
+    });
+  }
+
   /**
    * Get workspace by ID
    */
@@ -56,7 +73,7 @@ export class TursoStore {
    */
   async insertSession(session: QuerySession): Promise<void> {
     await this.client.execute({
-      sql: `INSERT INTO sessions (id, workspace_id, feature, pr_number, engineer_id, project_id, started_at, ended_at, total_cost_usd, total_tokens, turn_count, loop_detected)
+      sql: `INSERT OR IGNORE INTO sessions (id, workspace_id, feature, pr_number, engineer_id, project_id, started_at, ended_at, total_cost_usd, total_tokens, turn_count, loop_detected)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         session.id,
@@ -82,6 +99,35 @@ export class TursoStore {
     const result = await this.client.execute({
       sql: "SELECT * FROM sessions WHERE id = ?",
       args: [id],
+    });
+    if (result.rows.length === 0) return undefined;
+    const row = result.rows[0];
+    return {
+      id: row.id as string,
+      workspace_id: row.workspace_id as string,
+      feature: row.feature as string | undefined,
+      pr_number: row.pr_number as string | undefined,
+      engineer_id: row.engineer_id as string | undefined,
+      project_id: row.project_id as string | undefined,
+      started_at: row.started_at as number,
+      ended_at: row.ended_at as number | undefined,
+      total_cost_usd: row.total_cost_usd as number,
+      total_tokens: row.total_tokens as number,
+      turn_count: row.turn_count as number,
+      loop_detected: row.loop_detected as 0 | 1,
+    };
+  }
+
+  /**
+   * Get session by ID, scoped to workspace
+   */
+  async getSessionForWorkspace(
+    sessionId: string,
+    workspaceId: string,
+  ): Promise<QuerySession | undefined> {
+    const result = await this.client.execute({
+      sql: "SELECT * FROM sessions WHERE id = ? AND workspace_id = ?",
+      args: [sessionId, workspaceId],
     });
     if (result.rows.length === 0) return undefined;
     const row = result.rows[0];
@@ -131,6 +177,22 @@ export class TursoStore {
   }
 
   /**
+   * Count sessions in the current UTC month for billing/usage displays
+   */
+  async getSessionCountForCurrentMonth(workspaceId: string): Promise<number> {
+    const now = new Date();
+    const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0);
+    const nextMonthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0);
+    const result = await this.client.execute({
+      sql: `SELECT COUNT(*) as count
+            FROM sessions
+            WHERE workspace_id = ? AND started_at >= ? AND started_at < ?`,
+      args: [workspaceId, monthStart, nextMonthStart],
+    });
+    return (result.rows[0]?.count as number) || 0;
+  }
+
+  /**
    * Update session totals
    */
   async updateSessionTotals(
@@ -143,6 +205,44 @@ export class TursoStore {
     await this.client.execute({
       sql: `UPDATE sessions SET total_cost_usd = ?, total_tokens = ?, turn_count = ?, loop_detected = ? WHERE id = ?`,
       args: [totalCostUsd, totalTokens, turnCount, loopDetected, sessionId],
+    });
+  }
+
+  /**
+   * Recompute and persist session totals from all persisted events
+   */
+  async recomputeSessionTotals(sessionId: string, workspaceId: string): Promise<void> {
+    const totals = await this.client.execute({
+      sql: `SELECT
+              COALESCE(SUM(cost_usd), 0) AS total_cost,
+              COALESCE(SUM(
+                COALESCE(input_tokens, 0) +
+                COALESCE(output_tokens, 0) +
+                COALESCE(cache_read_tokens, 0) +
+                COALESCE(cache_write_tokens, 0)
+              ), 0) AS total_tokens,
+              COALESCE(SUM(CASE WHEN kind = 'turn' THEN 1 ELSE 0 END), 0) AS turn_count
+            FROM events
+            WHERE session_id = ? AND workspace_id = ?`,
+      args: [sessionId, workspaceId],
+    });
+
+    const totalsRow = totals.rows[0];
+    const loopedTools = await this.detectLoops(sessionId, workspaceId);
+    const loopDetected = loopedTools.length > 0 ? 1 : 0;
+
+    await this.client.execute({
+      sql: `UPDATE sessions
+            SET total_cost_usd = ?, total_tokens = ?, turn_count = ?, loop_detected = ?
+            WHERE id = ? AND workspace_id = ?`,
+      args: [
+        (totalsRow?.total_cost as number) || 0,
+        (totalsRow?.total_tokens as number) || 0,
+        (totalsRow?.turn_count as number) || 0,
+        loopDetected,
+        sessionId,
+        workspaceId,
+      ],
     });
   }
 
@@ -224,6 +324,48 @@ export class TursoStore {
   }
 
   /**
+   * Get all events for a session scoped to workspace
+   */
+  async getSessionEventsForWorkspace(
+    sessionId: string,
+    workspaceId: string,
+  ): Promise<QueryEvent[]> {
+    const result = await this.client.execute({
+      sql: `SELECT * FROM events WHERE session_id = ? AND workspace_id = ? ORDER BY started_at ASC`,
+      args: [sessionId, workspaceId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      session_id: row.session_id as string,
+      parent_id: row.parent_id as string | undefined,
+      workspace_id: row.workspace_id as string,
+      kind: row.kind as string,
+      started_at: row.started_at as number,
+      ended_at: row.ended_at as number | undefined,
+      model: row.model as string | undefined,
+      provider: row.provider as string | undefined,
+      input_tokens: row.input_tokens as number | undefined,
+      output_tokens: row.output_tokens as number | undefined,
+      cache_read_tokens: row.cache_read_tokens as number | undefined,
+      cache_write_tokens: row.cache_write_tokens as number | undefined,
+      cost_usd: row.cost_usd as number | undefined,
+      stop_reason: row.stop_reason as string | undefined,
+      tool_name: row.tool_name as string | undefined,
+      tool_call_id: row.tool_call_id as string | undefined,
+      tool_input_bytes: row.tool_input_bytes as number | undefined,
+      tool_output_bytes: row.tool_output_bytes as number | undefined,
+      is_error: row.is_error as 0 | 1 | undefined,
+      context_messages: row.context_messages as number | undefined,
+      context_token_estimate: row.context_token_estimate as number | undefined,
+      feature: row.feature as string | undefined,
+      pr_number: row.pr_number as string | undefined,
+      engineer_id: row.engineer_id as string | undefined,
+      metadata: row.metadata as string | undefined,
+    }));
+  }
+
+  /**
    * Get cost breakdown grouped by tool, model, feature, or engineer
    */
   async getCostBreakdown(
@@ -259,10 +401,10 @@ export class TursoStore {
   /**
    * Detect loops in a session (same tool called 3+ times consecutively)
    */
-  async detectLoops(sessionId: string): Promise<string[]> {
+  async detectLoops(sessionId: string, workspaceId: string): Promise<string[]> {
     const result = await this.client.execute({
-      sql: `SELECT tool_name FROM events WHERE session_id = ? AND kind = 'tool_exec' ORDER BY started_at ASC`,
-      args: [sessionId],
+      sql: `SELECT tool_name FROM events WHERE session_id = ? AND workspace_id = ? AND kind = 'tool_exec' ORDER BY started_at ASC`,
+      args: [sessionId, workspaceId],
     });
 
     const toolNames = result.rows.map((row) => row.tool_name as string);
@@ -317,11 +459,12 @@ export class TursoStore {
   /**
    * Delete an alert
    */
-  async deleteAlert(alertId: string): Promise<void> {
-    await this.client.execute({
-      sql: `DELETE FROM alerts WHERE id = ?`,
-      args: [alertId],
+  async deleteAlert(alertId: string, workspaceId: string): Promise<boolean> {
+    const result = await this.client.execute({
+      sql: `DELETE FROM alerts WHERE id = ? AND workspace_id = ?`,
+      args: [alertId, workspaceId],
     });
+    return (result.rowsAffected || 0) > 0;
   }
 
   /**
@@ -343,10 +486,10 @@ export class TursoStore {
   /**
    * Create and store API key hash
    */
-  async createApiKey(workspaceId: string, keyHash: string): Promise<void> {
+  async createApiKey(workspaceId: string, keyHash: string, keyId: string): Promise<void> {
     await this.client.execute({
       sql: `INSERT INTO api_keys (id, workspace_id, key_hash, created_at) VALUES (?, ?, ?, ?)`,
-      args: [`key-${Date.now()}`, workspaceId, keyHash, Date.now()],
+      args: [keyId, workspaceId, keyHash, Date.now()],
     });
   }
 
@@ -355,11 +498,71 @@ export class TursoStore {
    */
   async validateApiKey(keyHash: string): Promise<string | undefined> {
     const result = await this.client.execute({
-      sql: `SELECT workspace_id FROM api_keys WHERE key_hash = ?`,
+      sql: `SELECT id, workspace_id FROM api_keys WHERE key_hash = ?`,
       args: [keyHash],
     });
     if (result.rows.length === 0) return undefined;
-    return result.rows[0].workspace_id as string;
+    const row = result.rows[0];
+    await this.client.execute({
+      sql: `UPDATE api_keys SET last_used_at = ? WHERE id = ?`,
+      args: [Date.now(), row.id as string],
+    });
+    return row.workspace_id as string;
+  }
+
+  /**
+   * List API keys for a workspace
+   */
+  async listApiKeys(workspaceId: string): Promise<QueryApiKey[]> {
+    const result = await this.client.execute({
+      sql: `SELECT id, workspace_id, created_at, last_used_at FROM api_keys WHERE workspace_id = ? ORDER BY created_at DESC`,
+      args: [workspaceId],
+    });
+
+    return result.rows.map((row) => ({
+      id: row.id as string,
+      workspace_id: row.workspace_id as string,
+      created_at: row.created_at as number,
+      last_used_at: row.last_used_at as number | undefined,
+    }));
+  }
+
+  /**
+   * Revoke one API key by ID, scoped to workspace
+   */
+  async revokeApiKey(workspaceId: string, keyId: string): Promise<boolean> {
+    const result = await this.client.execute({
+      sql: `DELETE FROM api_keys WHERE workspace_id = ? AND id = ?`,
+      args: [workspaceId, keyId],
+    });
+    return (result.rowsAffected || 0) > 0;
+  }
+
+  /**
+   * Ingest idempotency lookup
+   */
+  async hasIngestRequest(workspaceId: string, idempotencyKey: string): Promise<boolean> {
+    const result = await this.client.execute({
+      sql: `SELECT id FROM ingest_requests WHERE workspace_id = ? AND idempotency_key = ? LIMIT 1`,
+      args: [workspaceId, idempotencyKey],
+    });
+    return result.rows.length > 0;
+  }
+
+  /**
+   * Record idempotency key for a completed ingest request
+   */
+  async recordIngestRequest(
+    id: string,
+    workspaceId: string,
+    idempotencyKey: string,
+    sessionId?: string,
+  ): Promise<void> {
+    await this.client.execute({
+      sql: `INSERT OR IGNORE INTO ingest_requests (id, workspace_id, idempotency_key, session_id, created_at)
+            VALUES (?, ?, ?, ?, ?)`,
+      args: [id, workspaceId, idempotencyKey, sessionId || null, Date.now()],
+    });
   }
 
   /**

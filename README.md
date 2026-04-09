@@ -149,6 +149,18 @@ Visit `http://localhost:3000` (web) and `http://localhost:3001` (server).
 npm test
 ```
 
+### Security Guardrails
+
+```bash
+# one-time: install local git hook
+npm run prepare
+
+# run secret scan manually
+npm run secret:scan
+```
+
+See [SECURITY_ROTATION.md](./SECURITY_ROTATION.md) for production key rotation and incident response steps.
+
 ---
 
 ## Integration with pi-mono

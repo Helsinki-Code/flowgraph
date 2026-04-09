@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Dashboard from "../../layouts/Dashboard.astro";
 import { API_URL } from "../../lib/api";
+import { fetchJsonWithTimeout } from "../../lib/server-fetch";
 
 let userId, orgId, token;
 try {
@@ -29,15 +30,12 @@ let error = null;
 
 if (workspaceId && token) {
   try {
-    const response = await fetch(`${API_URL}/v1/workspace?id=${workspaceId}`, {
-      headers: { "Authorization": `Bearer ${token}` },
+    const data = await fetchJsonWithTimeout<{ workspace: any }>(`${API_URL}/v1/workspace`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeoutMs: 8000,
+      retries: 1,
     });
-    if (!response.ok) {
-      error = `API Error: ${response.status} ${response.statusText}`;
-    } else {
-      const data = await response.json();
-      workspace = data.workspace || workspace;
-    }
+    workspace = data.workspace || workspace;
   } catch (e: any) {
     error = `Failed to load workspace: ${e.message}`;
   }

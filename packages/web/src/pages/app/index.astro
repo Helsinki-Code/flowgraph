@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Dashboard from "../../layouts/Dashboard.astro";
 import { API_URL } from "../../lib/api";
+import { fetchJsonWithTimeout, isApiHealthy } from "../../lib/server-fetch";
 
 let userId, orgId, token;
 try {
@@ -26,22 +27,23 @@ try {
 const workspaceId = orgId || userId;
 let sessions = [];
 let error = null;
+let apiDegraded = false;
 
 if (workspaceId && token) {
   try {
-    const response = await fetch(`${API_URL}/v1/sessions?workspace_id=${workspaceId}&limit=20`, {
+    const data = await fetchJsonWithTimeout<{ sessions: any[] }>(`${API_URL}/v1/sessions?limit=20`, {
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
+      timeoutMs: 8000,
+      retries: 1,
     });
-    if (!response.ok) {
-      error = `API Error: ${response.status} ${response.statusText}`;
-    } else {
-      const data = await response.json();
-      sessions = data.sessions || [];
-    }
+    sessions = data.sessions || [];
   } catch (e: any) {
-    error = `Failed to load sessions: ${e.message}`;
+    apiDegraded = !(await isApiHealthy(API_URL));
+    error = apiDegraded
+      ? "The API service is temporarily unavailable. We'll retry automatically when it comes back."
+      : `Failed to load sessions: ${e.message}`;
   }
 } else {
   error = "Missing authentication data";
@@ -341,6 +343,7 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
     error && (
       <div class="error-banner">
         {error}
+        {apiDegraded && <div style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>Tip: refresh in a few seconds if your API service is waking from cold start.</div>}
       </div>
     )
   }
@@ -409,7 +412,7 @@ const avgCost = sessions.length > 0 ? totalCost / sessions.length : 0;
           </div>
           <div class="step">
             <div class="step-number">2 Instrument your agent</div>
-            <code class="step-code">{`import { LocalCollector } from "flamegraph-sdk";
+            <code class="step-code">{`import { LocalCollector } from "@flamegraph/sdk";
 instrumentAgent(agent, {
   collector: new LocalCollector({
     serverUrl: "https://api.example.com",

@@ -115,6 +115,17 @@ export const SCHEMA_INIT_SQL = [
 
   `CREATE INDEX IF NOT EXISTS idx_api_keys_workspace ON api_keys(workspace_id)`,
   `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`,
+
+  // Idempotency keys for event ingestion
+  `CREATE TABLE IF NOT EXISTS ingest_requests (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    session_id TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ingest_requests_workspace_key ON ingest_requests(workspace_id, idempotency_key)`,
 ];
 
 /**
@@ -170,6 +181,13 @@ export interface QueryWorkspace {
   plan: "free" | "pro" | "business";
   stripe_customer_id?: string;
   created_at: number;
+}
+
+export interface QueryApiKey {
+  id: string;
+  workspace_id: string;
+  created_at: number;
+  last_used_at?: number;
 }
 
 export interface QueryAlert {

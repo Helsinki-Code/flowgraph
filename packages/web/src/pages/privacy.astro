@@ -1,0 +1,33 @@
+---
+import Public from "../layouts/Public.astro";
+---
+
+<Public title="Privacy" description="How Token Flame Graph handles data and security.">
+  <div class="container" style="max-width: 900px; padding: 4rem 1rem;">
+    <h1 style="margin-bottom: 1rem;">Privacy Policy</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+      Last updated: April 9, 2026
+    </p>
+    <p>
+      Token Flame Graph collects operational telemetry you intentionally send through the SDK (for example session IDs,
+      timing, token counts, and metadata fields). We use this data only to provide observability, cost analysis, and
+      reliability features for your workspace.
+    </p>
+    <h2 style="margin-top: 2rem;">Data We Store</h2>
+    <ul style="padding-left: 1.2rem; line-height: 1.8;">
+      <li>Workspace and account identifiers</li>
+      <li>Session and event traces submitted by SDK clients</li>
+      <li>Hashed API keys (never raw keys after creation)</li>
+      <li>Alert configurations and alert fire metadata</li>
+    </ul>
+    <h2 style="margin-top: 2rem;">Security</h2>
+    <p>
+      We apply workspace isolation controls, authenticated API access, and key hashing for credential storage. Access to
+      production systems is restricted to authorized operators.
+    </p>
+    <h2 style="margin-top: 2rem;">Contact</h2>
+    <p>
+      Questions about privacy: <a href="mailto:privacy@eddieai.online">privacy@eddieai.online</a>
+    </p>
+  </div>
+</Public>

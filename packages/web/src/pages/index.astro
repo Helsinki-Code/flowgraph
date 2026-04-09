@@ -760,17 +760,17 @@ import Public from "../layouts/Public.astro";
 
     <!-- Social Proof Logo Strip -->
     <div class="logo-strip-wrapper">
-      <div class="logo-strip-label">Used by AI engineers at:</div>
+      <div class="logo-strip-label">Built for teams running production LLM workflows:</div>
       <div class="logo-marquee">
-        <div class="logo-item">OpenAI</div>
-        <div class="logo-item">Anthropic</div>
-        <div class="logo-item">Google DeepMind</div>
-        <div class="logo-item">Mistral</div>
-        <div class="logo-item">Cohere</div>
-        <div class="logo-item">Together AI</div>
-        <div class="logo-item">OpenAI</div>
-        <div class="logo-item">Anthropic</div>
-        <div class="logo-item">Google DeepMind</div>
+        <div class="logo-item">Agent Platforms</div>
+        <div class="logo-item">ML Infrastructure</div>
+        <div class="logo-item">Product Engineering</div>
+        <div class="logo-item">Reliability Teams</div>
+        <div class="logo-item">FinOps</div>
+        <div class="logo-item">Developer Tooling</div>
+        <div class="logo-item">Agent Platforms</div>
+        <div class="logo-item">ML Infrastructure</div>
+        <div class="logo-item">Product Engineering</div>
       </div>
     </div>
 
@@ -855,7 +855,7 @@ import Public from "../layouts/Public.astro";
           <div class="code-path">agent.js</div>
         </div>
         <div class="code-block">
-          <code>{`import { LocalCollector } from "flamegraph-sdk";
+          <code>{`import { LocalCollector } from "@flamegraph/sdk";
 
 const collector = new LocalCollector({
   serverUrl: process.env.FLAMEGRAPH_URL,
@@ -876,8 +876,8 @@ instrumentAgent(agent, { collector });`}</code>
       </div>
 
       <div class="toggle-group">
-        <button class="toggle-btn active" onclick="setPricingPeriod('monthly')">Monthly</button>
-        <button class="toggle-btn" onclick="setPricingPeriod('annual')">Annual (20% off)</button>
+        <button class="toggle-btn active" onclick="setPricingPeriod('monthly', this)">Monthly</button>
+        <button class="toggle-btn" onclick="setPricingPeriod('annual', this)">Annual (20% off)</button>
       </div>
 
       <div class="pricing-grid">
@@ -929,30 +929,30 @@ instrumentAgent(agent, { collector });`}</code>
       </div>
     </section>
 
-    <!-- Testimonials Section -->
+    <!-- Outcomes Section -->
     <section class="testimonial-section">
-      <h2 class="testimonial-headline">What AI engineers love about us</h2>
+      <h2 class="testimonial-headline">Where teams get immediate wins</h2>
       <div class="testimonial-grid">
         <div class="testimonial-card">
           <p class="testimonial-quote">
-            "Flame Graph caught a runaway loop that was costing us $500/day. Paid for itself in the first week. Now it's essential to our stack."
+            Loop-heavy sessions become visible within seconds, so engineers can stop runaway tool chains before budget spikes.
           </p>
-          <div class="testimonial-author">Sarah Chen</div>
-          <div class="testimonial-role">CTO, AI Startup</div>
+          <div class="testimonial-author">Loop Detection</div>
+          <div class="testimonial-role">Reduced surprise spend during incident windows</div>
         </div>
         <div class="testimonial-card">
           <p class="testimonial-quote">
-            "Finally, we have visibility into token costs. We optimized our prompts and saved 40% on our bill just by seeing the flame graphs."
+            Token burn is attributed by feature and model, helping teams prioritize optimization work by impact instead of guesswork.
           </p>
-          <div class="testimonial-author">Marcus Johnson</div>
-          <div class="testimonial-role">Lead ML Engineer, Scale-up</div>
+          <div class="testimonial-author">Cost Attribution</div>
+          <div class="testimonial-role">Faster optimization cycles for prompt and context design</div>
         </div>
         <div class="testimonial-card">
           <p class="testimonial-quote">
-            "The loop detection is a game-changer. We used to get surprised by huge bills. Now we catch issues before they happen."
+            Session-level traces make handoffs cleaner across product, infra, and agent teams by showing exactly what happened and when.
           </p>
-          <div class="testimonial-author">Priya Patel</div>
-          <div class="testimonial-role">Engineering Manager, Fortune 500</div>
+          <div class="testimonial-author">Cross-Team Debugging</div>
+          <div class="testimonial-role">Shared source of truth for reliability reviews</div>
         </div>
       </div>
     </section>
@@ -967,10 +967,10 @@ instrumentAgent(agent, { collector });`}</code>
   </div>
 
   <script>
-    function setPricingPeriod(period) {
+    function setPricingPeriod(period, button) {
       const buttons = document.querySelectorAll('.toggle-btn');
       buttons.forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      if (button) button.classList.add('active');
 
       if (period === 'annual') {
         document.getElementById('free-price').textContent = '$0';

@@ -257,8 +257,8 @@ import Public from "../layouts/Public.astro";
       <p>All plans include real-time flame graphs and cost attribution. Scale from free to enterprise.</p>
 
       <div class="pricing-toggle">
-        <button class="toggle-btn active" onclick="setPricingPeriod('monthly')">Monthly</button>
-        <button class="toggle-btn" onclick="setPricingPeriod('annual')">Annual (20% off)</button>
+        <button class="toggle-btn active" onclick="setPricingPeriod('monthly', this)">Monthly</button>
+        <button class="toggle-btn" onclick="setPricingPeriod('annual', this)">Annual (20% off)</button>
       </div>
     </section>
 
@@ -358,10 +358,10 @@ import Public from "../layouts/Public.astro";
   </div>
 
   <script>
-    function setPricingPeriod(period) {
+    function setPricingPeriod(period, button) {
       const buttons = document.querySelectorAll('.toggle-btn');
       buttons.forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      if (button) button.classList.add('active');
 
       if (period === 'annual') {
         // 20% discount: $49 → $39.20, $299 → $239.20

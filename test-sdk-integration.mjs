@@ -8,9 +8,16 @@ import { LocalCollector } from './packages/sdk/dist/collector.js';
 
 // Configuration
 const SERVER_URL = 'https://flowgraph-n8xj.onrender.com';
-const API_KEY = 'sk_dc2bb28c69b2677724922a43da0ff8af40a5fb19b30170821ccb693efed3a497';
-const WORKSPACE_ID = 'user_3C58eBbBIiPVHohUqdDHSXJagDn';
+const API_KEY = process.env.FLAMEGRAPH_API_KEY;
+const WORKSPACE_ID = process.env.FLAMEGRAPH_WORKSPACE_ID;
 const SESSION_ID = 'session-' + Date.now();
+
+if (!API_KEY || !WORKSPACE_ID) {
+  console.error(
+    "Missing required env vars. Set FLAMEGRAPH_API_KEY and FLAMEGRAPH_WORKSPACE_ID before running this script.",
+  );
+  process.exit(1);
+}
 
 console.log('🔥 Token Flamegraph SDK Integration Test');
 console.log('========================================\n');
