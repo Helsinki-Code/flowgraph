@@ -23,10 +23,16 @@ const allowedGroupBy = new Set<GroupBy>(["tool", "model", "feature", "engineer"]
 const eventsRateWindowMs = 60_000;
 const eventsRateMax = 120;
 const eventsRateState = new Map<string, { count: number; windowStart: number }>();
+const storeRetryBaseMs = 1_500;
+const storeRetryMaxMs = 30_000;
 
 // Production database backed by Turso
 const store = new TursoStore();
 const clerkAuthMiddleware = createClerkAuthMiddleware(store);
+let storeReady = false;
+let storeReconnectInProgress = false;
+let storeConnectAttempts = 0;
+let storeLastError: string | undefined;
 
 // Create Fastify instance
 const app = Fastify({
@@ -107,6 +113,48 @@ function safeTimingEqual(a: string, b: string): boolean {
   const bBuf = Buffer.from(b, "utf8");
   if (aBuf.length !== bBuf.length) return false;
   return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function computeRetryDelay(attempt: number): number {
+  const exp = Math.min(6, Math.max(0, attempt - 1));
+  const base = storeRetryBaseMs * Math.pow(2, exp);
+  const jitter = Math.floor(Math.random() * 700);
+  return Math.min(storeRetryMaxMs, base + jitter);
+}
+
+async function ensureStoreConnected(): Promise<void> {
+  if (storeReady || storeReconnectInProgress) return;
+  storeReconnectInProgress = true;
+  while (!storeReady) {
+    storeConnectAttempts += 1;
+    try {
+      await store.initialize();
+      storeReady = true;
+      storeLastError = undefined;
+      app.log.info(
+        { attempts: storeConnectAttempts },
+        "database connection established; API is now fully available",
+      );
+      break;
+    } catch (err: any) {
+      storeLastError = err?.message || String(err);
+      const delayMs = computeRetryDelay(storeConnectAttempts);
+      app.log.error(
+        {
+          attempt: storeConnectAttempts,
+          retryInMs: delayMs,
+          error: storeLastError,
+        },
+        "database initialization failed; retrying",
+      );
+      await sleep(delayMs);
+    }
+  }
+  storeReconnectInProgress = false;
 }
 
 function verifyStripeSignature(
@@ -215,11 +263,22 @@ await app.register(cors, {
 
 // Register auth + basic rate limiting middleware
 app.addHook("preHandler", async (request, reply) => {
-  if (request.url === "/health" || request.url.startsWith("/v1/webhooks/stripe")) {
+  if (request.url === "/health") {
     return;
   }
 
-  if (request.url.startsWith("/v1/")) {
+  if (request.url.startsWith("/v1/") && !storeReady) {
+    sendError(
+      request,
+      reply,
+      503,
+      "DATABASE_UNAVAILABLE",
+      "Database is reconnecting. Please retry shortly.",
+    );
+    return;
+  }
+
+  if (request.url.startsWith("/v1/") && !request.url.startsWith("/v1/webhooks/stripe")) {
     await clerkAuthMiddleware(request, reply);
     if (reply.sent) return;
   }
@@ -821,7 +880,15 @@ app.get<{ Querystring: { group_by?: string } }>("/v1/cost/breakdown", async (req
  * Health check
  */
 app.get("/health", async () => {
-  return { ok: true };
+  return {
+    ok: true,
+    database: {
+      ready: storeReady,
+      attempts: storeConnectAttempts,
+      reconnecting: storeReconnectInProgress,
+      lastError: storeLastError,
+    },
+  };
 });
 
 /**
@@ -1103,9 +1170,11 @@ app.post("/v1/webhooks/stripe", async (request, reply) => {
  */
 async function start() {
   try {
-    await store.initialize();
     await app.listen({ port, host: "0.0.0.0" });
     console.log(`[flamegraph] server running on port ${port}`);
+    ensureStoreConnected().catch((err) => {
+      app.log.error(err, "database reconnect loop stopped unexpectedly");
+    });
   } catch (err) {
     app.log.error(err);
     process.exit(1);
