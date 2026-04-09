@@ -52,7 +52,7 @@ export function buildFlameTree(events: QueryEvent[]): FlameNode | null {
       tool_call_id: undefined,
       tool_input_bytes: 0,
       tool_output_bytes: 0,
-      is_error: false,
+      is_error: 0,
       model: undefined,
       provider: undefined,
       stop_reason: undefined,
