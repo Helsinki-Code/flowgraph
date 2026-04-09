@@ -53,25 +53,25 @@ const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimi
 ---
 
 <Dashboard title="Billing" description="Manage subscription and usage">
-  {error && <div style={{ padding: "1rem", background: "#7f1d1d", color: "#fca5a5", borderRadius: "0.375rem", marginBottom: "1.5rem" }}>{error}</div>}
+  {error && <div style={{ padding: "1rem", background: "var(--danger-bg)", color: "var(--danger-text)", borderRadius: "0.375rem", marginBottom: "1.5rem" }}>{error}</div>}
 
   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem" }}>
-    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+    <div style={{ background: "var(--surface-2)", padding: "2rem", borderRadius: "0.5rem", border: "1px solid var(--line-strong)" }}>
       <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Current Plan</h3>
       <div style={{ fontSize: "2rem", fontWeight: "700", marginBottom: "0.5rem", textTransform: "capitalize" }}>
         {workspace.plan}
       </div>
-      <div style={{ color: "#94a3b8", marginBottom: "2rem" }}>
+      <div style={{ color: "var(--text-dim)", marginBottom: "2rem" }}>
         {limits.cost}/month
       </div>
       {workspace.plan === "free" && (
-        <a href="/pricing" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "#f97316", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600" }}>
+        <a href="/pricing" style={{ display: "inline-block", padding: "0.75rem 1.5rem", background: "var(--accent)", color: "white", textDecoration: "none", borderRadius: "0.375rem", fontWeight: "600" }}>
           Upgrade to Pro
         </a>
       )}
     </div>
 
-    <div style={{ background: "#1e293b", padding: "2rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+    <div style={{ background: "var(--surface-2)", padding: "2rem", borderRadius: "0.5rem", border: "1px solid var(--line-strong)" }}>
       <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>Usage</h3>
       <div style={{ marginBottom: "1rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
@@ -81,11 +81,11 @@ const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimi
           </span>
         </div>
         {limits.sessions > 0 && (
-          <div style={{ width: "100%", height: "8px", background: "#0f172a", borderRadius: "9999px", overflow: "hidden" }}>
+          <div style={{ width: "100%", height: "8px", background: "var(--surface-1)", borderRadius: "9999px", overflow: "hidden" }}>
             <div
               style={{
                 height: "100%",
-                background: "#f97316",
+                background: "var(--accent)",
                 width: `${Math.min((workspace.sessions_this_month / limits.sessions) * 100, 100)}%`,
               }}
             />
@@ -95,8 +95,9 @@ const limits = planLimits[workspace.plan as keyof typeof planLimits] || planLimi
     </div>
   </div>
 
-  <div style={{ marginTop: "2rem", padding: "1.5rem", background: "#1e293b", borderRadius: "0.5rem", border: "1px solid #334155" }}>
+  <div style={{ marginTop: "2rem", padding: "1.5rem", background: "var(--surface-2)", borderRadius: "0.5rem", border: "1px solid var(--line-strong)" }}>
     <h3 style={{ marginBottom: "1rem" }}>Invoice History</h3>
-    <p style={{ color: "#94a3b8" }}>No invoices yet.</p>
+    <p style={{ color: "var(--text-dim)" }}>No invoices yet.</p>
   </div>
 </Dashboard>
+

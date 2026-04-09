@@ -1,31 +1,29 @@
 /**
- * FlamegraphEvent — the core data model for all instrumentation
- * Every token-generating action maps to one or more of these events
+ * FlamegraphEvent is the core instrumentation payload.
  */
-
 export type EventKind = "session" | "turn" | "llm_call" | "tool_exec" | "context_build";
 
 export interface FlamegraphEvent {
   // Identity
   eventId: string; // ulid
   sessionId: string; // maps to pi-agent sessionId
-  parentId: string | null; // for nesting: session → turn → llm_call + tool_exec
-  workspaceId: string; // multi-tenant
+  parentId: string | null; // nesting: session -> turn -> llm_call/tool_exec
+  workspaceId: string;
 
-  // Attribution (set by user via instrumentAgent options)
-  feature?: string; // "search-bar", "auth-flow"
-  prNumber?: string; // "234"
-  engineerId?: string; // "alice"
+  // Attribution
+  feature?: string;
+  prNumber?: string;
+  engineerId?: string;
   projectId?: string;
 
   // Timing
-  startedAt: number; // Unix ms
+  startedAt: number; // unix ms
   endedAt?: number;
 
   // Event type
   kind: EventKind;
 
-  // LLM call data (kind === "llm_call")
+  // LLM call data
   model?: string;
   provider?: string;
   inputTokens?: number;
@@ -35,30 +33,29 @@ export interface FlamegraphEvent {
   costUsd?: number;
   stopReason?: "stop" | "length" | "toolUse" | "error" | "aborted";
 
-  // Tool exec data (kind === "tool_exec")
+  // Tool execution data
   toolName?: string;
   toolCallId?: string;
   toolInputBytes?: number;
   toolOutputBytes?: number;
   isError?: boolean;
 
-  // Context build data (kind === "context_build")
+  // Context build data
   contextMessages?: number;
   contextTokenEstimate?: number;
 
-  // Raw metadata
+  // Extensible metadata
   metadata?: Record<string, unknown>;
 }
 
 /**
- * Session state tracker — in-memory representation of a session's event tree
- * Used by Collector to build parent-child relationships
+ * In-memory session tree used by collectors.
  */
 export interface SessionSpan {
   sessionId: string;
   sessionEventId: string;
   startedAt: number;
-  turnStacks: Map<number, TurnSpan>; // turnIndex → TurnSpan
+  turnStacks: Map<number, TurnSpan>;
   currentTurnIndex?: number;
   currentTurnId?: string;
 }
@@ -67,7 +64,7 @@ export interface TurnSpan {
   turnIndex: number;
   turnEventId: string;
   startedAt: number;
-  toolExecs: Map<string, ToolExecSpan>; // toolCallId → ToolExecSpan
+  toolExecs: Map<string, ToolExecSpan>;
 }
 
 export interface ToolExecSpan {
@@ -79,7 +76,7 @@ export interface ToolExecSpan {
 }
 
 /**
- * Instrumentation options passed to instrumentAgent()
+ * Options passed to instrumentAgent().
  */
 export interface InstrumentOptions {
   collector: EventCollector;
@@ -92,17 +89,26 @@ export interface InstrumentOptions {
 }
 
 /**
- * EventCollector interface — where events go (local storage, remote API, etc.)
+ * Collector contract for SDK instrumentation.
  */
 export interface EventCollector {
   startSession(sessionId: string, options: InstrumentOptions): void;
   startTurn(sessionId: string, turnIndex: number): void;
+  endTurn?(data: TurnEndData): void;
   recordLlmCall(data: LlmCallData): void;
   startToolExec(data: ToolExecStartData): void;
+  recordToolExecUpdate?(data: ToolExecUpdateData): void;
   endToolExec(data: ToolExecEndData): void;
   recordContextBuild(data: ContextBuildData): void;
   closeSession(sessionId: string, endedAt: number): void;
   flush(): Promise<void>;
+}
+
+export interface TurnEndData {
+  sessionId: string;
+  turnIndex: number;
+  endedAt: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface LlmCallData {
@@ -115,6 +121,7 @@ export interface LlmCallData {
   cacheWriteTokens: number;
   costUsd: number;
   stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
+  startedAt?: number;
   endedAt: number;
   metadata?: Record<string, unknown>;
 }
@@ -128,11 +135,20 @@ export interface ToolExecStartData {
   metadata?: Record<string, unknown>;
 }
 
+export interface ToolExecUpdateData {
+  sessionId: string;
+  toolCallId: string;
+  toolName: string;
+  partialResult: unknown;
+  at?: number;
+}
+
 export interface ToolExecEndData {
   toolCallId: string;
   outputBytes: number;
   isError: boolean;
   endedAt: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ContextBuildData {

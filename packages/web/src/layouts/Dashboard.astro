@@ -7,6 +7,11 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+const isSessionsRoute = Astro.url.pathname.startsWith("/app") && !Astro.url.pathname.startsWith("/app/cost")
+  && !Astro.url.pathname.startsWith("/app/alerts")
+  && !Astro.url.pathname.startsWith("/app/billing")
+  && !Astro.url.pathname.startsWith("/app/settings")
+  && !Astro.url.pathname.startsWith("/app/budgets");
 ---
 
 <!doctype html>
@@ -14,37 +19,342 @@ const { title, description } = Astro.props;
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title} — Token Flame Graph</title>
+    <title>{title} - Token Flame Graph</title>
     <meta name="description" content={description || "AI agent session profiler"} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <script>
-      // Prevent flash of expanded sidebar on page load
-      if (localStorage.getItem('sidebar-collapsed') === 'true') {
-        document.documentElement.classList.add('sidebar-is-collapsed');
-      }
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Manrope:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <script is:inline>
+      (() => {
+        const themeKey = "tfg-theme";
+        const sidebarKey = "tfg-sidebar-collapsed";
+        const savedTheme = localStorage.getItem(themeKey);
+        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : prefersDark ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+        if (localStorage.getItem(sidebarKey) === "true") {
+          document.documentElement.classList.add("sidebar-collapsed");
+        }
+      })();
     </script>
     <style>
       :root {
-        --sidebar-width: 260px;
-        --sidebar-collapsed-width: 68px;
-        --accent-color: #f97316;
-        --accent-hover: #ea580c;
-        --bg-base: #09090d;
-        --bg-sidebar: #0d0d12;
-        --border-color: #1a1a24;
-        --text-primary: #e8e8f0;
-        --text-secondary: #888899;
+        --sidebar-width: 18rem;
+        --sidebar-collapsed-width: 5.25rem;
+        --radius-lg: 1rem;
+        --radius-md: 0.75rem;
+        --radius-sm: 0.5rem;
+        --shadow-soft: 0 24px 60px rgba(6, 12, 26, 0.16);
+        --transition-main: 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --bg-canvas: #06080f;
+        --bg-canvas-2: #0b0f1a;
+        --bg-orb-a: rgba(251, 113, 34, 0.2);
+        --bg-orb-b: rgba(15, 172, 213, 0.22);
+        --bg-orb-c: rgba(123, 97, 255, 0.2);
+        --sidebar-bg: rgba(7, 11, 20, 0.86);
+        --sidebar-border: rgba(148, 163, 184, 0.22);
+        --panel-bg: rgba(16, 23, 39, 0.82);
+        --panel-border: rgba(148, 163, 184, 0.2);
+        --surface-1: #16243b;
+        --surface-2: #1b2d45;
+        --surface-3: #13253d;
+        --line-strong: rgba(148, 163, 184, 0.3);
+        --text-main: #ebf2ff;
+        --text-subtle: #b8c4df;
+        --text-dim: #8da2c8;
+        --accent: #f97316;
+        --accent-strong: #ea580c;
+        --accent-soft: rgba(249, 115, 22, 0.18);
+        --danger-bg: rgba(127, 29, 29, 0.78);
+        --danger-text: #fecaca;
+        --danger-border: #b91c1c;
+        --success-text: #86efac;
+      }
+
+      html[data-theme="light"] {
+        color-scheme: light;
+        --bg-canvas: #f6f8ff;
+        --bg-canvas-2: #edf2ff;
+        --bg-orb-a: rgba(251, 113, 34, 0.2);
+        --bg-orb-b: rgba(14, 165, 233, 0.17);
+        --bg-orb-c: rgba(59, 130, 246, 0.15);
+        --sidebar-bg: rgba(255, 255, 255, 0.9);
+        --sidebar-border: rgba(15, 23, 42, 0.12);
+        --panel-bg: rgba(255, 255, 255, 0.88);
+        --panel-border: rgba(15, 23, 42, 0.14);
+        --surface-1: #ecf3ff;
+        --surface-2: #e3ecff;
+        --surface-3: #f4f8ff;
+        --line-strong: rgba(15, 23, 42, 0.16);
+        --text-main: #0f172a;
+        --text-subtle: #334155;
+        --text-dim: #5b6f90;
+        --accent: #ea580c;
+        --accent-strong: #c2410c;
+        --accent-soft: rgba(234, 88, 12, 0.14);
+        --danger-bg: rgba(254, 226, 226, 0.95);
+        --danger-text: #7f1d1d;
+        --danger-border: rgba(185, 28, 28, 0.35);
+        --success-text: #15803d;
       }
 
       * {
-        margin: 0;
-        padding: 0;
         box-sizing: border-box;
       }
 
-      @keyframes fadeIn {
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        color: var(--text-main);
+        background:
+          radial-gradient(circle at 7% 12%, var(--bg-orb-a), transparent 34%),
+          radial-gradient(circle at 92% 16%, var(--bg-orb-b), transparent 38%),
+          radial-gradient(circle at 74% 84%, var(--bg-orb-c), transparent 42%),
+          linear-gradient(180deg, var(--bg-canvas), var(--bg-canvas-2));
+        background-attachment: fixed;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+        background-size: 30px 30px;
+        mask-image: radial-gradient(circle at center, black, transparent 82%);
+        opacity: 0.28;
+        z-index: -1;
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        min-height: 100vh;
+        transition: grid-template-columns var(--transition-main);
+      }
+
+      html.sidebar-collapsed .app-shell {
+        grid-template-columns: var(--sidebar-collapsed-width) 1fr;
+      }
+
+      .side-rail {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 1rem 0.9rem;
+        backdrop-filter: blur(20px);
+        background: var(--sidebar-bg);
+        border-right: 1px solid var(--sidebar-border);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .brand {
+        position: relative;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-lg);
+        background: var(--panel-bg);
+        padding: 1rem 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+      }
+
+      .brand-mark {
+        width: 2.1rem;
+        height: 2.1rem;
+        border-radius: 0.65rem;
+        background: linear-gradient(140deg, var(--accent), #22d3ee);
+        display: grid;
+        place-items: center;
+        color: #fff;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.25);
+        flex-shrink: 0;
+      }
+
+      .brand-copy {
+        min-width: 0;
+        transition: opacity var(--transition-main), transform var(--transition-main);
+      }
+
+      .brand-title {
+        margin: 0;
+        font-family: "Bricolage Grotesque", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        font-size: 1.02rem;
+      }
+
+      .brand-subtitle {
+        margin: 0.2rem 0 0;
+        font-size: 0.72rem;
+        color: var(--text-dim);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .sidebar-toggle {
+        position: absolute;
+        right: 0.6rem;
+        top: 0.6rem;
+        border: 1px solid var(--panel-border);
+        background: var(--surface-1);
+        color: var(--text-subtle);
+        width: 1.9rem;
+        height: 1.9rem;
+        border-radius: 0.5rem;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: transform var(--transition-main), color var(--transition-main), border-color var(--transition-main);
+      }
+
+      .sidebar-toggle:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .nav {
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-lg);
+        background: var(--panel-bg);
+        padding: 0.55rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.34rem;
+      }
+
+      .nav a {
+        text-decoration: none;
+      }
+
+      .nav-item {
+        display: grid;
+        grid-template-columns: 1.6rem 1fr;
+        align-items: center;
+        gap: 0.7rem;
+        border-radius: 0.68rem;
+        padding: 0.65rem 0.7rem;
+        color: var(--text-subtle);
+        border: 1px solid transparent;
+        transition: background var(--transition-main), border-color var(--transition-main), color var(--transition-main);
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+
+      .nav-item:hover {
+        background: var(--surface-1);
+        border-color: var(--panel-border);
+      }
+
+      .nav-item.active {
+        color: var(--text-main);
+        background: linear-gradient(130deg, var(--accent-soft), rgba(34, 211, 238, 0.12));
+        border-color: rgba(249, 115, 22, 0.35);
+      }
+
+      .nav-icon {
+        width: 1.1rem;
+        height: 1.1rem;
+      }
+
+      .nav-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: opacity var(--transition-main), transform var(--transition-main);
+      }
+
+      .side-footer {
+        margin-top: auto;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-lg);
+        background: var(--panel-bg);
+        padding: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+      }
+
+      .theme-toggle {
+        border: 1px solid var(--panel-border);
+        background: var(--surface-1);
+        color: var(--text-main);
+        border-radius: 999px;
+        padding: 0.32rem 0.52rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        cursor: pointer;
+        transition: transform var(--transition-main), border-color var(--transition-main);
+      }
+
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+
+      .theme-dot {
+        width: 0.95rem;
+        height: 0.95rem;
+        border-radius: 50%;
+        background: linear-gradient(140deg, #f97316, #22d3ee);
+      }
+
+      .theme-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .workspace {
+        padding: 1.1rem 1.4rem 1.5rem;
+      }
+
+      .header {
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-lg);
+        padding: 1.2rem 1.25rem;
+        background: var(--panel-bg);
+        box-shadow: var(--shadow-soft);
+        margin-bottom: 1rem;
+      }
+
+      .header-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-dim);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 0.2rem;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-family: "Bricolage Grotesque", sans-serif;
+        font-size: clamp(1.35rem, 2.7vw, 2.15rem);
+        letter-spacing: -0.02em;
+      }
+
+      .header p {
+        margin: 0.45rem 0 0;
+        color: var(--text-subtle);
+        max-width: 52ch;
+      }
+
+      .content {
+        animation: contentIn 360ms ease-out;
+      }
+
+      @keyframes contentIn {
         from {
           opacity: 0;
           transform: translateY(8px);
@@ -55,344 +365,222 @@ const { title, description } = Astro.props;
         }
       }
 
-      body {
-        font-family: "IBM Plex Sans", -apple-system, sans-serif;
-        background: var(--bg-base);
-        color: var(--text-primary);
-        line-height: 1.6;
-      }
-
-      h1, h2, h3, h4, h5, h6 {
-        font-family: "Syne", -apple-system, sans-serif;
-        font-weight: 700;
-      }
-
-      code {
-        font-family: "JetBrains Mono", monospace;
-      }
-
-      .sidebar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: var(--sidebar-width);
-        height: 100vh;
-        background: var(--bg-sidebar);
-        border-right: 1px solid var(--border-color);
-        border-top: 3px solid var(--accent-color);
-        overflow-y: auto;
-        padding: 1.5rem 1rem;
-        display: flex;
-        flex-direction: column;
-        transition: width 240ms cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 100;
-      }
-
-      body.sidebar-is-collapsed .sidebar {
-        width: var(--sidebar-collapsed-width);
-      }
-
-      .logo {
-        font-size: 1.25rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        transition: opacity 180ms;
-        min-height: 2.5rem;
-      }
-
-      .logo-icon {
-        width: 1.5rem;
-        height: 1.5rem;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .logo-text, .logo-tagline {
-        transition: opacity 180ms, width 180ms;
-        white-space: nowrap;
-        overflow: hidden;
-      }
-
-      body.sidebar-is-collapsed .logo-text,
-      body.sidebar-is-collapsed .logo-tagline {
+      html.sidebar-collapsed .brand-copy,
+      html.sidebar-collapsed .nav-label,
+      html.sidebar-collapsed .theme-label {
         opacity: 0;
+        transform: translateX(-8px);
         width: 0;
+        pointer-events: none;
       }
 
-      .logo-tagline {
-        font-size: 0.65rem;
-        color: var(--text-secondary);
-        font-weight: 400;
-        font-family: "IBM Plex Sans", sans-serif;
-        margin-top: -0.25rem;
-      }
-
-      .sidebar-toggle {
-        position: absolute;
-        right: 1rem;
-        top: 1.5rem;
-        background: transparent;
-        border: none;
-        color: var(--accent-color);
-        cursor: pointer;
-        font-size: 1.25rem;
-        padding: 0.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: color 0.2s;
-        z-index: 101;
-      }
-
-      .sidebar-toggle:hover {
-        color: var(--accent-hover);
-      }
-
-      .nav {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-top: 2rem;
-        flex: 1;
-      }
-
-      .nav a {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1rem;
-        border-radius: 0.375rem;
-        color: var(--text-secondary);
-        text-decoration: none;
-        transition: all 0.2s;
-        border-left: 3px solid transparent;
-        font-size: 0.95rem;
-      }
-
-      .nav a:hover {
-        background: rgba(249, 115, 22, 0.1);
-        color: #b0b0c0;
-      }
-
-      .nav a.active {
-        color: var(--accent-color);
-        border-left-color: var(--accent-color);
-        background: rgba(249, 115, 22, 0.12);
-      }
-
-      .nav-icon {
-        width: 1.25rem;
-        height: 1.25rem;
-        flex-shrink: 0;
-      }
-
-      .nav-label {
-        transition: opacity 180ms, width 180ms;
-        white-space: nowrap;
-        overflow: hidden;
-      }
-
-      body.sidebar-is-collapsed .nav-label {
-        opacity: 0;
-        width: 0;
-      }
-
-      .main {
-        margin-left: var(--sidebar-width);
-        min-height: 100vh;
-        padding: 2rem 2.5rem;
-        transition: margin-left 240ms cubic-bezier(0.4, 0, 0.2, 1);
-        animation: fadeIn 0.3s ease-out;
-      }
-
-      body.sidebar-is-collapsed .main {
-        margin-left: var(--sidebar-collapsed-width);
-      }
-
-      .header {
-        margin-bottom: 2rem;
-      }
-
-      .header h1 {
-        font-size: 2rem;
-        font-weight: 800;
-        margin-bottom: 0.5rem;
-        color: var(--text-primary);
-      }
-
-      .header p {
-        color: var(--text-secondary);
-        font-size: 0.95rem;
-        font-weight: 400;
-      }
-
-      .sidebar-bottom {
-        margin-top: auto;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
+      html.sidebar-collapsed .side-footer {
         justify-content: center;
       }
 
-      @media (max-width: 768px) {
-        .sidebar {
-          position: relative;
-          width: 100%;
+      html.sidebar-collapsed .theme-toggle {
+        padding-inline: 0.35rem;
+      }
+
+      html.sidebar-collapsed .brand {
+        justify-content: center;
+      }
+
+      html.sidebar-collapsed .sidebar-toggle svg {
+        transform: rotate(180deg);
+      }
+
+      @media (max-width: 1040px) {
+        .app-shell,
+        html.sidebar-collapsed .app-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .side-rail {
+          position: static;
           height: auto;
-          border-right: none;
-          border-bottom: 1px solid var(--border-color);
-          border-top: none;
-          padding: 1rem 1.5rem;
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 0;
         }
 
-        .sidebar.collapsed,
-        body.sidebar-is-collapsed .sidebar {
-          width: 100%;
-        }
-
-        .sidebar-toggle {
-          display: none;
-        }
-
-        .main {
-          margin-left: 0;
-          padding: 1.5rem;
+        .brand {
+          padding-right: 2.8rem;
         }
 
         .nav {
-          flex-direction: row;
-          gap: 0.25rem;
-          margin-top: 0;
-          flex: none;
-          overflow-x: auto;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0.35rem;
         }
 
-        .nav a {
-          padding: 0.5rem 0.75rem;
-          font-size: 0.85rem;
-          border-left: none;
-          border-bottom: 3px solid transparent;
+        .nav-item {
+          grid-template-columns: 1fr;
+          justify-items: center;
+          text-align: center;
+          font-size: 0.78rem;
+          gap: 0.4rem;
+          min-height: 4rem;
         }
 
-        .nav a.active {
-          border-left: none;
-          border-bottom-color: var(--accent-color);
-        }
-
-        .logo-text, .logo-tagline {
+        .nav-label,
+        html.sidebar-collapsed .nav-label,
+        html.sidebar-collapsed .theme-label,
+        html.sidebar-collapsed .brand-copy {
           opacity: 1;
           width: auto;
+          transform: none;
+          pointer-events: auto;
         }
 
-        .nav-label {
-          opacity: 1;
-          width: auto;
+        .workspace {
+          padding: 1rem;
+        }
+      }
+
+      @media (max-width: 680px) {
+        .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .side-footer {
+          justify-content: space-between;
+        }
+
+        .theme-label {
+          display: none;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
         }
       }
     </style>
   </head>
   <body>
-    <div class="sidebar">
-      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
-        ‹
-      </button>
-      <div class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #f97316">
-            <path d="M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" fill="currentColor"/>
-          </svg>
+    <div class="app-shell">
+      <aside class="side-rail">
+        <div class="brand">
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Toggle sidebar">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 18h3l1-8 4 10 2-6 2 4h4"></path>
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <p class="brand-title">Token Flame Graph</p>
+            <p class="brand-subtitle">Control room</p>
+          </div>
         </div>
-        <div>
-          <div class="logo-text">Flame Graph</div>
-          <div class="logo-tagline">Token Observability</div>
+
+        <nav class="nav">
+          <a href="/app" class={`nav-item ${isSessionsRoute ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="8" height="8" rx="1"></rect>
+              <rect x="13" y="3" width="8" height="5" rx="1"></rect>
+              <rect x="13" y="10" width="8" height="11" rx="1"></rect>
+              <rect x="3" y="13" width="8" height="8" rx="1"></rect>
+            </svg>
+            <span class="nav-label">Sessions</span>
+          </a>
+          <a href="/app/cost" class={`nav-item ${Astro.url.pathname === "/app/cost" ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 18h16"></path>
+              <path d="M6 16V9"></path>
+              <path d="M12 16V5"></path>
+              <path d="M18 16v-4"></path>
+            </svg>
+            <span class="nav-label">Cost</span>
+          </a>
+          <a href="/app/alerts" class={`nav-item ${Astro.url.pathname === "/app/alerts" ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.7 21a2 2 0 0 1-3.4 0"></path>
+            </svg>
+            <span class="nav-label">Alerts</span>
+          </a>
+          <a href="/app/billing" class={`nav-item ${Astro.url.pathname === "/app/billing" ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+              <path d="M2 10h20"></path>
+            </svg>
+            <span class="nav-label">Billing</span>
+          </a>
+          <a href="/app/settings" class={`nav-item ${Astro.url.pathname === "/app/settings" ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1L7 17M17 7l2.1-2.1"></path>
+            </svg>
+            <span class="nav-label">Settings</span>
+          </a>
+          <a href="/app/budgets" class={`nav-item ${Astro.url.pathname === "/app/budgets" ? "active" : ""}`}>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16v16H4z"></path>
+              <path d="M7 14l3-3 2 2 5-5"></path>
+            </svg>
+            <span class="nav-label">Budgets</span>
+          </a>
+        </nav>
+
+        <div class="side-footer">
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+            <span class="theme-dot"></span>
+            <span class="theme-label" id="theme-label">Dark</span>
+          </button>
+          <UserButton />
         </div>
-      </div>
-      <nav class="nav">
-        <a href="/app" class={Astro.url.pathname.startsWith("/app") && !Astro.url.pathname.includes("/sessions") && !Astro.url.pathname.includes("/settings") ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
-          <span class="nav-label">Sessions</span>
-        </a>
-        <a href="/app/cost" class={Astro.url.pathname === "/app/cost" ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="8"></circle>
-            <path d="M12 6v12M8 10h8"></path>
-          </svg>
-          <span class="nav-label">Cost Analysis</span>
-        </a>
-        <a href="/app/alerts" class={Astro.url.pathname === "/app/alerts" ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span class="nav-label">Alerts</span>
-        </a>
-        <a href="/app/billing" class={Astro.url.pathname === "/app/billing" ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-          </svg>
-          <span class="nav-label">Billing</span>
-        </a>
-        <a href="/app/settings" class={Astro.url.pathname === "/app/settings" ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m3.08 3.08l4.24 4.24M1 12h6m6 0h6m-16.78 7.78l4.24-4.24m3.08-3.08l4.24-4.24"></path>
-          </svg>
-          <span class="nav-label">Settings</span>
-        </a>
-        <a href="/app/budgets" class={Astro.url.pathname === "/app/budgets" ? "active" : ""}>
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 3h18v18H3z"></path>
-            <path d="M7 15l3-3 2 2 5-5"></path>
-          </svg>
-          <span class="nav-label">Budgets</span>
-        </a>
-      </nav>
-      <div class="sidebar-bottom">
-        <UserButton />
-      </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="header">
+          <div class="header-label">Telemetry workspace</div>
+          <h1>{title}</h1>
+          {description && <p>{description}</p>}
+        </header>
+        <main class="content">
+          <slot />
+        </main>
+      </section>
     </div>
 
-    <main class="main">
-      <div class="header">
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
-      </div>
-
-      <slot />
-    </main>
-
     <script>
-      const sidebar = document.querySelector('.sidebar');
-      const toggle = document.getElementById('sidebar-toggle');
-      const STORAGE_KEY = 'sidebar-collapsed';
+      const html = document.documentElement;
+      const sidebarKey = "tfg-sidebar-collapsed";
+      const themeKey = "tfg-theme";
 
-      // Restore saved state
-      if (localStorage.getItem(STORAGE_KEY) === 'true') {
-        document.body.classList.add('sidebar-is-collapsed');
-        toggle.textContent = '›';
+      const sidebarToggle = document.getElementById("sidebar-toggle");
+      const themeToggle = document.getElementById("theme-toggle");
+      const themeLabel = document.getElementById("theme-label");
+
+      function applyTheme(theme) {
+        html.setAttribute("data-theme", theme);
+        localStorage.setItem(themeKey, theme);
+        if (themeLabel) {
+          themeLabel.textContent = theme === "dark" ? "Dark" : "Light";
+        }
       }
 
-      toggle.addEventListener('click', () => {
-        const isCollapsed = document.body.classList.toggle('sidebar-is-collapsed');
-        localStorage.setItem(STORAGE_KEY, isCollapsed);
-        toggle.textContent = isCollapsed ? '›' : '‹';
-      });
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener("click", () => {
+          html.classList.toggle("sidebar-collapsed");
+          localStorage.setItem(sidebarKey, String(html.classList.contains("sidebar-collapsed")));
+        });
+      }
+
+      if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+          const current = html.getAttribute("data-theme") === "light" ? "light" : "dark";
+          applyTheme(current === "dark" ? "light" : "dark");
+        });
+      }
+
+      const currentTheme = html.getAttribute("data-theme") === "light" ? "light" : "dark";
+      applyTheme(currentTheme);
     </script>
   </body>
 </html>

@@ -6,16 +6,16 @@ import {
   SessionSpan,
   TurnSpan,
   ToolExecSpan,
+  TurnEndData,
   LlmCallData,
   ToolExecStartData,
+  ToolExecUpdateData,
   ToolExecEndData,
   ContextBuildData,
 } from "./event-model.js";
 
 /**
- * LocalCollector — buffers events in memory and batches them
- * Used by SDKs for local development and testing
- * Implements EventCollector interface
+ * LocalCollector buffers events in memory and optionally flushes to the server.
  */
 export class LocalCollector implements EventCollector {
   private events: FlamegraphEvent[] = [];
@@ -41,7 +41,6 @@ export class LocalCollector implements EventCollector {
     const sessionEventId = ulid();
     const now = Date.now();
 
-    // Create session event
     this.events.push({
       eventId: sessionEventId,
       sessionId,
@@ -56,7 +55,6 @@ export class LocalCollector implements EventCollector {
       projectId: options.projectId,
     });
 
-    // Track session state
     this.sessions.set(sessionId, {
       sessionId,
       sessionEventId,
@@ -72,7 +70,6 @@ export class LocalCollector implements EventCollector {
     const turnEventId = ulid();
     const now = Date.now();
 
-    // Create turn event
     this.events.push({
       eventId: turnEventId,
       sessionId,
@@ -83,7 +80,6 @@ export class LocalCollector implements EventCollector {
       metadata: { turnIndex },
     });
 
-    // Track turn state
     const turnSpan: TurnSpan = {
       turnIndex,
       turnEventId,
@@ -93,6 +89,23 @@ export class LocalCollector implements EventCollector {
     session.turnStacks.set(turnIndex, turnSpan);
     session.currentTurnIndex = turnIndex;
     session.currentTurnId = turnEventId;
+  }
+
+  endTurn(data: TurnEndData): void {
+    const session = this.sessions.get(data.sessionId);
+    if (!session) return;
+
+    const turn = session.turnStacks.get(data.turnIndex);
+    if (!turn) return;
+
+    const turnEvent = this.events.find((event) => event.eventId === turn.turnEventId);
+    if (!turnEvent) return;
+
+    turnEvent.endedAt = data.endedAt;
+    turnEvent.metadata = {
+      ...(turnEvent.metadata || {}),
+      ...(data.metadata || {}),
+    };
   }
 
   recordLlmCall(data: LlmCallData): void {
@@ -105,7 +118,7 @@ export class LocalCollector implements EventCollector {
       parentId: session.currentTurnId,
       workspaceId: this.options?.workspaceId || "",
       kind: "llm_call",
-      startedAt: data.endedAt - 100, // estimate; ideally we'd track from start
+      startedAt: typeof data.startedAt === "number" ? data.startedAt : data.endedAt - 100,
       endedAt: data.endedAt,
       model: data.model,
       provider: data.provider,
@@ -131,7 +144,6 @@ export class LocalCollector implements EventCollector {
 
     const toolExecEventId = ulid();
 
-    // Create tool exec event
     this.events.push({
       eventId: toolExecEventId,
       sessionId: data.sessionId,
@@ -148,7 +160,6 @@ export class LocalCollector implements EventCollector {
       },
     });
 
-    // Track tool exec state
     const toolExecSpan: ToolExecSpan = {
       toolCallId: data.toolCallId,
       toolExecEventId,
@@ -159,15 +170,40 @@ export class LocalCollector implements EventCollector {
     turn.toolExecs.set(data.toolCallId, toolExecSpan);
   }
 
-  endToolExec(data: ToolExecEndData): void {
-    // Find the tool exec event and update it
+  recordToolExecUpdate(data: ToolExecUpdateData): void {
     const toolEvent = this.events.find(
-      (e) => e.toolCallId === data.toolCallId && e.kind === "tool_exec" && !e.endedAt,
+      (event) => event.toolCallId === data.toolCallId && event.kind === "tool_exec" && !event.endedAt,
     );
-    if (toolEvent) {
-      toolEvent.endedAt = data.endedAt;
-      toolEvent.toolOutputBytes = data.outputBytes;
-      toolEvent.isError = data.isError;
+    if (!toolEvent) return;
+
+    const metadata = (toolEvent.metadata || {}) as Record<string, unknown>;
+    const progress = (metadata.progress || {}) as Record<string, unknown>;
+    const updateCount = Number(progress.updateCount || 0) + 1;
+
+    toolEvent.metadata = {
+      ...metadata,
+      progress: {
+        ...progress,
+        updateCount,
+        lastUpdateAt: data.at || Date.now(),
+      },
+    };
+  }
+
+  endToolExec(data: ToolExecEndData): void {
+    const toolEvent = this.events.find(
+      (event) => event.toolCallId === data.toolCallId && event.kind === "tool_exec" && !event.endedAt,
+    );
+    if (!toolEvent) return;
+
+    toolEvent.endedAt = data.endedAt;
+    toolEvent.toolOutputBytes = data.outputBytes;
+    toolEvent.isError = data.isError;
+    if (data.metadata) {
+      toolEvent.metadata = {
+        ...(toolEvent.metadata || {}),
+        ...data.metadata,
+      };
     }
   }
 
@@ -175,14 +211,15 @@ export class LocalCollector implements EventCollector {
     const session = this.sessions.get(data.sessionId);
     if (!session) return;
 
+    const endedAt = data.endedAt || Date.now();
     this.events.push({
       eventId: ulid(),
       sessionId: data.sessionId,
       parentId: session.currentTurnId || null,
       workspaceId: this.options?.workspaceId || "",
       kind: "context_build",
-      startedAt: (data.endedAt || Date.now()) - data.durationMs,
-      endedAt: data.endedAt,
+      startedAt: endedAt - data.durationMs,
+      endedAt,
       contextMessages: data.messageCount,
       contextTokenEstimate: data.estimatedTokens,
       metadata: {
@@ -193,24 +230,23 @@ export class LocalCollector implements EventCollector {
   }
 
   closeSession(sessionId: string, endedAt: number): void {
-    // Update the session event with end time
     const sessionEvent = this.events.find(
-      (e) => e.sessionId === sessionId && e.kind === "session" && !e.endedAt,
+      (event) => event.sessionId === sessionId && event.kind === "session" && !event.endedAt,
     );
     if (sessionEvent) {
       sessionEvent.endedAt = endedAt;
     }
 
-    // Update all turn events with end time
     const session = this.sessions.get(sessionId);
-    if (session) {
-      for (const turnSpan of session.turnStacks.values()) {
-        const turnEvent = this.events.find((e) => e.eventId === turnSpan.turnEventId);
-        if (turnEvent && !turnEvent.endedAt) {
-          turnEvent.endedAt = endedAt;
-        }
+    if (!session) return;
+
+    for (const turnSpan of session.turnStacks.values()) {
+      const turnEvent = this.events.find((event) => event.eventId === turnSpan.turnEventId);
+      if (turnEvent && !turnEvent.endedAt) {
+        turnEvent.endedAt = endedAt;
       }
     }
+    this.sessions.delete(sessionId);
   }
 
   async flush(): Promise<void> {
@@ -219,7 +255,6 @@ export class LocalCollector implements EventCollector {
     const batch = [...this.events];
     this.events = [];
 
-    // Skip if no server configured (local mode)
     if (!this.serverUrl) {
       console.log(`[flamegraph] local mode: ${batch.length} events buffered (no server configured)`);
       return;
@@ -237,40 +272,26 @@ export class LocalCollector implements EventCollector {
       });
 
       if (!response.ok) {
-        console.error(
-          `[flamegraph] flush failed: ${response.status} ${response.statusText}`,
-        );
-        // Re-add events to buffer on failure
+        console.error(`[flamegraph] flush failed: ${response.status} ${response.statusText}`);
         this.events = batch.concat(this.events);
       } else {
         console.log(`[flamegraph] flushed ${batch.length} events to server`);
       }
     } catch (err) {
-      console.error(`[flamegraph] flush error:`, err);
-      // Re-add events to buffer on error
+      console.error("[flamegraph] flush error:", err);
       this.events = batch.concat(this.events);
     }
   }
 
-  /**
-   * Get all events collected so far
-   * Useful for testing
-   */
   getEvents(): FlamegraphEvent[] {
     return [...this.events];
   }
 
-  /**
-   * Clear all events
-   */
   clear(): void {
     this.events = [];
     this.sessions.clear();
   }
 
-  /**
-   * Cleanup (stop auto-flush interval if running)
-   */
   destroy(): void {
     if (this.flushInterval) {
       clearInterval(this.flushInterval);
@@ -279,16 +300,18 @@ export class LocalCollector implements EventCollector {
 }
 
 /**
- * Utility: estimate tokens from message array using character count heuristic
- * ~4 chars per token (rough average)
+ * Estimate tokens from message content using a simple character heuristic.
  */
 export function estimateTokens(messages: any[]): number {
   if (!Array.isArray(messages)) return 0;
+
   let chars = 0;
   for (const msg of messages) {
     if (typeof msg === "string") {
       chars += msg.length;
-    } else if (msg && typeof msg === "object") {
+      continue;
+    }
+    if (msg && typeof msg === "object") {
       if ("content" in msg && typeof msg.content === "string") {
         chars += msg.content.length;
       } else {

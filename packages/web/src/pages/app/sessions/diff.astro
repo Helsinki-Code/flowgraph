@@ -28,9 +28,7 @@ if (token) {
   try {
     const sessionsData = await fetchJsonWithTimeout<{ sessions: any[] }>(
       `${API_URL}/v1/sessions?limit=100`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
+      { headers: { Authorization: `Bearer ${token}` } },
     );
     sessions = sessionsData.sessions || [];
 
@@ -51,79 +49,130 @@ if (token) {
 }
 ---
 
-<Dashboard title="Session Diff" description="Compare two runs for cost, token, and reliability regressions">
+<Dashboard title="Session Diff" description="Compare two runs for cost, token, and reliability regressions.">
   <style>
     .panel {
-      background: #111118;
-      border: 1px solid #1e1e2e;
-      border-radius: 12px;
-      padding: 1.25rem;
-      margin-bottom: 1rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.95rem;
+      padding: 1.15rem;
+      margin-bottom: 0.9rem;
     }
-    select, .btn {
-      background: #0f172a;
-      border: 1px solid #334155;
-      color: #f8fafc;
-      border-radius: 0.45rem;
-      padding: 0.65rem 0.75rem;
-      font-size: 0.9rem;
-    }
-    .btn {
-      background: #f97316;
-      border-color: transparent;
-      font-weight: 700;
-      text-decoration: none;
-      display: inline-block;
-    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.75rem;
+      gap: 0.7rem;
       align-items: end;
     }
-    .metric {
-      border: 1px solid #243244;
-      border-radius: 10px;
-      padding: 0.85rem;
-      background: #0b1220;
+
+    .label {
+      margin-bottom: 0.4rem;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 700;
     }
-    .metric .k { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
-    .metric .v { color: #e2e8f0; font-weight: 700; font-size: 1.1rem; margin-top: 0.3rem; }
-    .delta.up { color: #f87171; }
-    .delta.down { color: #34d399; }
-    .delta.flat { color: #93c5fd; }
+
+    .control,
+    .btn {
+      width: 100%;
+      border-radius: 0.55rem;
+      border: 1px solid var(--line-strong);
+      background: var(--surface-1);
+      color: var(--text-main);
+      padding: 0.6rem 0.72rem;
+      font-size: 0.88rem;
+    }
+
+    .btn {
+      cursor: pointer;
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .btn:hover {
+      background: var(--accent-strong);
+    }
+
+    .metric {
+      border: 1px solid var(--line-strong);
+      border-radius: 0.7rem;
+      padding: 0.8rem;
+      background: var(--surface-3);
+    }
+
+    .metric-key {
+      color: var(--text-dim);
+      font-size: 0.74rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .metric-value {
+      color: var(--text-main);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 1.06rem;
+      margin-top: 0.35rem;
+      font-weight: 700;
+    }
+
+    .delta-up {
+      color: var(--danger-text);
+      font-weight: 700;
+      margin-top: 0.3rem;
+      font-size: 0.82rem;
+    }
+
+    .delta-down {
+      color: var(--success-text);
+      font-weight: 700;
+      margin-top: 0.3rem;
+      font-size: 0.82rem;
+    }
+
+    .delta-flat {
+      color: var(--text-subtle);
+      font-weight: 700;
+      margin-top: 0.3rem;
+      font-size: 0.82rem;
+    }
   </style>
 
   <div class="panel">
     <form class="grid" method="get">
       <label>
-        <div style={{ marginBottom: "0.4rem", color: "#94a3b8", fontSize: "0.82rem" }}>Base session</div>
-        <select name="base" required>
+        <div class="label">Base session</div>
+        <select class="control" name="base" required>
           <option value="">Select session</option>
           {sessions.map((session) => (
             <option value={session.id} selected={baseSessionId === session.id}>
-              {session.id.slice(0, 12)} • ${session.total_cost_usd.toFixed(4)} • {(session.total_tokens || 0).toLocaleString()} tokens
+              {session.id.slice(0, 12)} | ${session.total_cost_usd.toFixed(4)} | {(session.total_tokens || 0).toLocaleString()} tokens
             </option>
           ))}
         </select>
       </label>
       <label>
-        <div style={{ marginBottom: "0.4rem", color: "#94a3b8", fontSize: "0.82rem" }}>Target session</div>
-        <select name="target" required>
+        <div class="label">Target session</div>
+        <select class="control" name="target" required>
           <option value="">Select session</option>
           {sessions.map((session) => (
             <option value={session.id} selected={targetSessionId === session.id}>
-              {session.id.slice(0, 12)} • ${session.total_cost_usd.toFixed(4)} • {(session.total_tokens || 0).toLocaleString()} tokens
+              {session.id.slice(0, 12)} | ${session.total_cost_usd.toFixed(4)} | {(session.total_tokens || 0).toLocaleString()} tokens
             </option>
           ))}
         </select>
       </label>
-      <button class="btn" type="submit">Compare Sessions</button>
+      <button class="btn" type="submit">Compare Runs</button>
     </form>
   </div>
 
   {error && (
-    <div class="panel" style={{ borderColor: "#7f1d1d", background: "#2a1111", color: "#fecaca" }}>
+    <div class="panel" style={{ borderColor: "var(--danger-border)", background: "var(--danger-bg)", color: "var(--danger-text)" }}>
       {error}
     </div>
   )}
@@ -131,16 +180,18 @@ if (token) {
   {diff && (
     <>
       <div class="panel">
-        <h3 style={{ marginBottom: "0.8rem" }}>Core Metrics</h3>
+        <h3 style={{ marginBottom: "0.75rem" }}>Core Metrics</h3>
         <div class="grid">
           {Object.entries(diff.metrics).map(([key, value]: [string, any]) => (
             <div class="metric">
-              <div class="k">{key}</div>
-              <div class="v">
-                {typeof value.target === "number" ? value.target.toLocaleString(undefined, { maximumFractionDigits: 4 }) : value.target}
+              <div class="metric-key">{key}</div>
+              <div class="metric-value">
+                {typeof value.target === "number"
+                  ? value.target.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                  : value.target}
               </div>
-              <div class={`delta ${value.delta > 0 ? "up" : value.delta < 0 ? "down" : "flat"}`}>
-                Δ {value.delta.toLocaleString(undefined, { maximumFractionDigits: 4 })} ({value.deltaPct.toFixed(1)}%)
+              <div class={value.delta > 0 ? "delta-up" : value.delta < 0 ? "delta-down" : "delta-flat"}>
+                Delta {value.delta.toLocaleString(undefined, { maximumFractionDigits: 4 })} ({value.deltaPct.toFixed(1)}%)
               </div>
             </div>
           ))}
@@ -148,16 +199,18 @@ if (token) {
       </div>
 
       <div class="panel">
-        <h3 style={{ marginBottom: "0.8rem" }}>Top Regressions</h3>
+        <h3 style={{ marginBottom: "0.75rem" }}>Top Regressions</h3>
         {diff.regressions.length === 0 ? (
-          <p style={{ color: "#94a3b8" }}>No positive-cost or positive-token regressions detected.</p>
+          <p style={{ color: "var(--text-dim)", margin: 0 }}>
+            No positive-cost or positive-token regressions detected.
+          </p>
         ) : (
           <div style={{ display: "grid", gap: "0.5rem" }}>
             {diff.regressions.map((regression: any) => (
               <div class="metric">
-                <div style={{ fontWeight: "700", color: "#f8fafc" }}>{regression.key}</div>
-                <div style={{ color: "#93c5fd", fontSize: "0.84rem", marginTop: "0.35rem" }}>
-                  Cost +${regression.deltaCostUsd.toFixed(4)} • Tokens +{regression.deltaTokens.toLocaleString()}
+                <div style={{ fontWeight: "700", color: "var(--text-main)" }}>{regression.key}</div>
+                <div style={{ color: "var(--text-subtle)", fontSize: "0.84rem", marginTop: "0.34rem" }}>
+                  Cost +${regression.deltaCostUsd.toFixed(4)} | Tokens +{regression.deltaTokens.toLocaleString()}
                 </div>
               </div>
             ))}
@@ -167,4 +220,3 @@ if (token) {
     </>
   )}
 </Dashboard>
-

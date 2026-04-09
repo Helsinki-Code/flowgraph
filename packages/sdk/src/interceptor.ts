@@ -1,10 +1,29 @@
 import { InstrumentOptions, EventCollector } from "./event-model.js";
 import { estimateTokens } from "./collector.js";
 
-// Type stubs for pi-agent (provided by host application)
+// Type stubs for pi-agent (provided by host application).
 type Agent = any;
 type AgentEvent = any;
 type AssistantMessage = any;
+
+type StopReason = "stop" | "length" | "toolUse" | "error" | "aborted";
+
+interface StreamingStats {
+  updateCount: number;
+  firstUpdateAt?: number;
+  lastUpdateAt?: number;
+  textDeltaChars: number;
+  thinkingDeltaChars: number;
+  toolCallDeltaChars: number;
+  eventTypeCounts: Record<string, number>;
+}
+
+interface ToolUpdateStats {
+  updateCount: number;
+  firstUpdateAt?: number;
+  lastUpdateAt?: number;
+  partialBytes: number;
+}
 
 function stableString(input: unknown): string {
   try {
@@ -23,6 +42,23 @@ function tinyHash(input: string): string {
   return `h${(hash >>> 0).toString(16)}`;
 }
 
+function safeByteLength(input: unknown): number {
+  const encoded = stableString(input);
+  return Buffer.byteLength(encoded, "utf8");
+}
+
+function safeNumber(input: unknown): number {
+  const value = Number(input);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function asStopReason(input: unknown): StopReason {
+  if (input === "stop" || input === "length" || input === "toolUse" || input === "error" || input === "aborted") {
+    return input;
+  }
+  return "stop";
+}
+
 function extractContextAnatomyFromMessage(msg: AssistantMessage): Record<string, unknown> | undefined {
   const usage = msg?.usage;
   if (!usage) return undefined;
@@ -39,9 +75,8 @@ function extractContextAnatomyFromMessage(msg: AssistantMessage): Record<string,
     }
   }
 
-  // Fallback heuristic based on prompt usage tokens
-  const input = Number(usage.input || 0);
-  if (!Number.isFinite(input) || input <= 0) return undefined;
+  const input = safeNumber(usage.input);
+  if (input <= 0) return undefined;
   return {
     systemPromptTokens: Math.round(input * 0.14),
     historyTokens: Math.round(input * 0.46),
@@ -53,95 +88,270 @@ function extractContextAnatomyFromMessage(msg: AssistantMessage): Record<string,
   };
 }
 
+function getAssistantMessageKey(msg: AssistantMessage): string | undefined {
+  if (!msg || msg.role !== "assistant") return undefined;
+
+  const responseId = typeof msg.responseId === "string" ? msg.responseId : undefined;
+  if (responseId && responseId.trim() !== "") {
+    return `response:${responseId}`;
+  }
+
+  const timestamp = safeNumber(msg.timestamp);
+  const model = typeof msg.model === "string" ? msg.model : "unknown";
+  const provider = typeof msg.provider === "string" ? msg.provider : "unknown";
+  const contentShape = Array.isArray(msg.content)
+    ? msg.content
+        .map((part: any) => `${String(part?.type || "unknown")}:${String(part?.name || "")}`)
+        .join("|")
+    : "none";
+  if (timestamp > 0) {
+    return `ts:${timestamp}:${provider}:${model}:${tinyHash(contentShape)}`;
+  }
+  return undefined;
+}
+
+function summarizeAssistantContent(msg: AssistantMessage): Record<string, number> {
+  const content = Array.isArray(msg?.content) ? msg.content : [];
+  let textChars = 0;
+  let thinkingChars = 0;
+  let toolCalls = 0;
+
+  for (const item of content) {
+    if (!item || typeof item !== "object") continue;
+    if (item.type === "text") textChars += String(item.text || "").length;
+    if (item.type === "thinking") thinkingChars += String(item.thinking || "").length;
+    if (item.type === "toolCall") toolCalls += 1;
+  }
+
+  return { contentBlocks: content.length, textChars, thinkingChars, toolCalls };
+}
+
+function updateStreamingStats(stats: StreamingStats, assistantMessageEvent: any, at: number): void {
+  const type = String(assistantMessageEvent?.type || "unknown");
+  stats.updateCount += 1;
+  stats.firstUpdateAt = stats.firstUpdateAt ?? at;
+  stats.lastUpdateAt = at;
+  stats.eventTypeCounts[type] = (stats.eventTypeCounts[type] || 0) + 1;
+
+  if (type === "text_delta") stats.textDeltaChars += String(assistantMessageEvent?.delta || "").length;
+  if (type === "thinking_delta") stats.thinkingDeltaChars += String(assistantMessageEvent?.delta || "").length;
+  if (type === "toolcall_delta") stats.toolCallDeltaChars += String(assistantMessageEvent?.delta || "").length;
+}
+
 /**
- * instrumentAgent() — main entry point
- * Wraps a pi-agent Agent with flamegraph instrumentation
- * Returns unsubscribe function
+ * instrumentAgent() wraps a pi-agent Agent with instrumentation hooks.
  */
 export function instrumentAgent(agent: Agent, options: InstrumentOptions): () => void {
   const collector = options.collector;
 
-  // Track turn index (we need to infer it from message count or track it ourselves)
   let currentTurnIndex = 0;
   let sessionStarted = false;
 
-  // Subscribe to all AgentEvents
-  const unsub = agent.subscribe(async (event: AgentEvent, signal?: AbortSignal) => {
+  const llmStartByMessageKey = new Map<string, number>();
+  const streamStatsByMessageKey = new Map<string, StreamingStats>();
+  const toolStatsByCallId = new Map<string, ToolUpdateStats>();
+
+  const unsub = agent.subscribe(async (event: AgentEvent) => {
     const now = Date.now();
 
     try {
       if (event.type === "agent_start") {
         sessionStarted = true;
         currentTurnIndex = 0;
+        llmStartByMessageKey.clear();
+        streamStatsByMessageKey.clear();
+        toolStatsByCallId.clear();
         if (agent.sessionId) {
           collector.startSession(agent.sessionId, options);
         }
       }
 
-      if (event.type === "turn_start") {
-        if (agent.sessionId) {
-          collector.startTurn(agent.sessionId, currentTurnIndex);
+      if (event.type === "turn_start" && agent.sessionId) {
+        collector.startTurn(agent.sessionId, currentTurnIndex);
+      }
+
+      if (event.type === "message_start") {
+        const msg = event.message as AssistantMessage;
+        if (msg?.role === "assistant") {
+          const messageKey = getAssistantMessageKey(msg);
+          if (messageKey) {
+            llmStartByMessageKey.set(messageKey, now);
+            if (!streamStatsByMessageKey.has(messageKey)) {
+              streamStatsByMessageKey.set(messageKey, {
+                updateCount: 0,
+                textDeltaChars: 0,
+                thinkingDeltaChars: 0,
+                toolCallDeltaChars: 0,
+                eventTypeCounts: {},
+              });
+            }
+          }
+        }
+      }
+
+      if (event.type === "message_update") {
+        const msg = event.message as AssistantMessage;
+        if (msg?.role === "assistant") {
+          const messageKey = getAssistantMessageKey(msg);
+          if (messageKey) {
+            const stats =
+              streamStatsByMessageKey.get(messageKey) ||
+              ({
+                updateCount: 0,
+                textDeltaChars: 0,
+                thinkingDeltaChars: 0,
+                toolCallDeltaChars: 0,
+                eventTypeCounts: {},
+              } as StreamingStats);
+            updateStreamingStats(stats, event.assistantMessageEvent, now);
+            streamStatsByMessageKey.set(messageKey, stats);
+          }
         }
       }
 
       if (event.type === "message_end") {
         const msg = event.message as AssistantMessage;
-        const promptMaterial = stableString(
-          msg?.request || msg?.prompt || msg?.messages || msg?.input || msg?.metadata?.prompt,
-        );
-        const contextAnatomy = extractContextAnatomyFromMessage(msg);
+        if (msg?.role === "assistant" && agent.sessionId) {
+          const usage = msg.usage || {};
+          const messageKey = getAssistantMessageKey(msg);
+          const startedAt = messageKey ? llmStartByMessageKey.get(messageKey) : undefined;
+          const streamStats = messageKey ? streamStatsByMessageKey.get(messageKey) : undefined;
 
-        // Record LLM call with full usage data
-        if (msg.usage && agent.sessionId && msg.model && msg.provider) {
+          const promptMaterial = stableString(
+            msg?.request || msg?.prompt || msg?.messages || msg?.input || msg?.metadata?.prompt || "",
+          );
+          const promptSignature =
+            promptMaterial && promptMaterial !== "null" && promptMaterial !== '""'
+              ? tinyHash(promptMaterial)
+              : undefined;
+          const contextAnatomy = extractContextAnatomyFromMessage(msg);
+          const contentSummary = summarizeAssistantContent(msg);
+
           collector.recordLlmCall({
             sessionId: agent.sessionId,
-            model: msg.model,
-            provider: msg.provider,
-            inputTokens: msg.usage.input,
-            outputTokens: msg.usage.output,
-            cacheReadTokens: msg.usage.cacheRead,
-            cacheWriteTokens: msg.usage.cacheWrite,
-            costUsd: msg.usage.cost.total,
-            stopReason: (msg.stopReason || "stop") as "stop" | "length" | "toolUse" | "error" | "aborted",
+            model: typeof msg.model === "string" && msg.model ? msg.model : "unknown",
+            provider: typeof msg.provider === "string" && msg.provider ? msg.provider : "unknown",
+            inputTokens: safeNumber(usage.input),
+            outputTokens: safeNumber(usage.output),
+            cacheReadTokens: safeNumber(usage.cacheRead),
+            cacheWriteTokens: safeNumber(usage.cacheWrite),
+            costUsd: safeNumber(usage?.cost?.total),
+            stopReason: asStopReason(msg.stopReason),
+            startedAt,
             endedAt: now,
             metadata: {
               ...(options.agentId ? { agentId: options.agentId } : {}),
-              promptSignature: tinyHash(promptMaterial),
+              ...(promptSignature ? { promptSignature } : {}),
               ...(contextAnatomy ? { contextAnatomy } : {}),
+              contentSummary,
+              stream:
+                streamStats && streamStats.updateCount > 0
+                  ? {
+                      updateCount: streamStats.updateCount,
+                      firstUpdateOffsetMs:
+                        typeof startedAt === "number" && typeof streamStats.firstUpdateAt === "number"
+                          ? Math.max(0, streamStats.firstUpdateAt - startedAt)
+                          : undefined,
+                      streamDurationMs:
+                        typeof streamStats.firstUpdateAt === "number" &&
+                        typeof streamStats.lastUpdateAt === "number"
+                          ? Math.max(0, streamStats.lastUpdateAt - streamStats.firstUpdateAt)
+                          : undefined,
+                      eventTypeCounts: streamStats.eventTypeCounts,
+                      textDeltaChars: streamStats.textDeltaChars,
+                      thinkingDeltaChars: streamStats.thinkingDeltaChars,
+                      toolCallDeltaChars: streamStats.toolCallDeltaChars,
+                    }
+                  : undefined,
             },
           });
+
+          if (messageKey) {
+            llmStartByMessageKey.delete(messageKey);
+            streamStatsByMessageKey.delete(messageKey);
+          }
         }
       }
 
-      if (event.type === "tool_execution_start") {
-        // Record tool execution start
-        if (agent.sessionId && event.toolCallId && event.toolName) {
-          collector.startToolExec({
-            sessionId: agent.sessionId,
-            toolCallId: event.toolCallId,
-            toolName: event.toolName,
-            inputBytes: JSON.stringify(event.args).length,
-            startedAt: now,
-            metadata: {
-              ...(options.agentId ? { agentId: options.agentId } : {}),
-            },
-          });
-        }
+      if (event.type === "tool_execution_start" && agent.sessionId && event.toolCallId && event.toolName) {
+        collector.startToolExec({
+          sessionId: agent.sessionId,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          inputBytes: safeByteLength(event.args),
+          startedAt: now,
+          metadata: {
+            ...(options.agentId ? { agentId: options.agentId } : {}),
+          },
+        });
+
+        toolStatsByCallId.set(event.toolCallId, {
+          updateCount: 0,
+          partialBytes: 0,
+        });
       }
 
-      if (event.type === "tool_execution_end") {
-        // Record tool execution end
-        if (event.toolCallId) {
-          collector.endToolExec({
-            toolCallId: event.toolCallId,
-            outputBytes: JSON.stringify(event.result).length,
-            isError: event.isError || false,
-            endedAt: now,
-          });
-        }
+      if (event.type === "tool_execution_update" && agent.sessionId && event.toolCallId && event.toolName) {
+        const stats = toolStatsByCallId.get(event.toolCallId) || {
+          updateCount: 0,
+          partialBytes: 0,
+        };
+        stats.updateCount += 1;
+        stats.partialBytes += safeByteLength(event.partialResult);
+        stats.firstUpdateAt = stats.firstUpdateAt ?? now;
+        stats.lastUpdateAt = now;
+        toolStatsByCallId.set(event.toolCallId, stats);
+
+        collector.recordToolExecUpdate?.({
+          sessionId: agent.sessionId,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          partialResult: event.partialResult,
+          at: now,
+        });
       }
 
-      if (event.type === "turn_end") {
+      if (event.type === "tool_execution_end" && event.toolCallId) {
+        const stats = toolStatsByCallId.get(event.toolCallId);
+        collector.endToolExec({
+          toolCallId: event.toolCallId,
+          outputBytes: safeByteLength(event.result),
+          isError: Boolean(event.isError),
+          endedAt: now,
+          metadata: stats
+            ? {
+                progress: {
+                  updateCount: stats.updateCount,
+                  partialBytes: stats.partialBytes,
+                  firstUpdateAt: stats.firstUpdateAt,
+                  lastUpdateAt: stats.lastUpdateAt,
+                  updateDurationMs:
+                    typeof stats.firstUpdateAt === "number" && typeof stats.lastUpdateAt === "number"
+                      ? Math.max(0, stats.lastUpdateAt - stats.firstUpdateAt)
+                      : 0,
+                },
+              }
+            : undefined,
+        });
+        toolStatsByCallId.delete(event.toolCallId);
+      }
+
+      if (event.type === "turn_end" && agent.sessionId) {
+        const assistantMessage = event.message;
+        const toolResults = Array.isArray(event.toolResults) ? event.toolResults : [];
+        collector.endTurn?.({
+          sessionId: agent.sessionId,
+          turnIndex: currentTurnIndex,
+          endedAt: now,
+          metadata: {
+            turnIndex: currentTurnIndex,
+            toolResultCount: toolResults.length,
+            toolErrors: toolResults.filter((result: any) => Boolean(result?.isError)).length,
+            messageRole: assistantMessage?.role,
+            stopReason: assistantMessage?.stopReason,
+            turnOutputTokens: safeNumber(assistantMessage?.usage?.output),
+          },
+        });
         currentTurnIndex++;
       }
 
@@ -151,23 +361,25 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
         }
         await collector.flush();
         sessionStarted = false;
+        llmStartByMessageKey.clear();
+        streamStatsByMessageKey.clear();
+        toolStatsByCallId.clear();
       }
     } catch (err) {
       console.error("[flamegraph] instrumentation error:", err);
     }
   });
 
-  // Wrap transformContext to measure context window build cost
+  // Wrap transformContext to measure context-building cost.
   const originalTransform = agent.transformContext;
   agent.transformContext = async (messages: any[], signal?: AbortSignal) => {
     const before = Date.now();
-    const result = originalTransform
-      ? await originalTransform(messages, signal)
-      : messages;
+    const transformed = originalTransform ? await originalTransform(messages, signal) : messages;
+    const normalizedMessages = Array.isArray(transformed) ? transformed : messages;
 
     if (agent.sessionId && sessionStarted) {
-      const roleCounts = Array.isArray(result)
-        ? result.reduce(
+      const roleCounts = Array.isArray(normalizedMessages)
+        ? normalizedMessages.reduce(
             (acc: Record<string, number>, item: any) => {
               const role = typeof item?.role === "string" ? item.role : "unknown";
               acc[role] = (acc[role] || 0) + 1;
@@ -176,10 +388,11 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
             {},
           )
         : {};
+
       collector.recordContextBuild({
         sessionId: agent.sessionId,
-        messageCount: result.length,
-        estimatedTokens: estimateTokens(result),
+        messageCount: Array.isArray(normalizedMessages) ? normalizedMessages.length : 0,
+        estimatedTokens: estimateTokens(Array.isArray(normalizedMessages) ? normalizedMessages : []),
         durationMs: Date.now() - before,
         endedAt: Date.now(),
         metadata: {
@@ -189,51 +402,32 @@ export function instrumentAgent(agent: Agent, options: InstrumentOptions): () =>
       });
     }
 
-    return result;
+    return transformed;
   };
 
-  // Return unsubscribe function
   return () => {
     unsub();
-    if (originalTransform) {
-      agent.transformContext = originalTransform;
-    }
+    agent.transformContext = originalTransform;
   };
 }
 
 /**
- * instrumentStream() — wraps a raw stream function for non-Agent use
- * Useful for instrumenting direct calls to stream() or completeSimple()
+ * instrumentStream() wraps a raw stream function for non-Agent use.
  */
 export function instrumentStream<TApi, TOptions>(
   streamFn: (model: any, context: any, options?: TOptions) => any,
-  collector: EventCollector,
-  workspaceId: string,
+  _collector: EventCollector,
+  _workspaceId: string,
 ): typeof streamFn {
   return (model: any, context: any, options?: TOptions) => {
     const stream = streamFn(model, context, options);
-    const startTime = Date.now();
-    let tokenCount = 0;
-
-    // Wrap the stream to collect token data
     const wrappedStream = {
       async *[Symbol.asyncIterator]() {
         for await (const event of stream) {
-          // Pass through event
           yield event;
-
-          // Intercept done event to record cost
-          if (event.type === "done" && event.message) {
-            const msg = event.message as AssistantMessage;
-            if (msg.usage) {
-              tokenCount = msg.usage.totalTokens;
-              // Note: would record here with session ID if available
-            }
-          }
         }
       },
     };
-
     return wrappedStream;
   };
 }

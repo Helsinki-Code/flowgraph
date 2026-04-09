@@ -94,10 +94,10 @@ if (token) {
     .error-banner {
       padding: 1rem;
       border-radius: 0.5rem;
-      background: #7f1d1d;
-      color: #fecaca;
+      background: var(--danger-bg);
+      color: var(--danger-text);
       margin-bottom: 1rem;
-      border: 1px solid #991b1b;
+      border: 1px solid var(--danger-border);
       font-size: 0.9rem;
     }
 
@@ -109,15 +109,15 @@ if (token) {
     }
 
     .metric-card {
-      background: #111118;
-      border: 1px solid #1e1e2e;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 12px;
       padding: 1rem;
     }
 
     .metric-label {
       font-size: 0.75rem;
-      color: #94a3b8;
+      color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.05em;
       margin-bottom: 0.4rem;
@@ -126,7 +126,7 @@ if (token) {
     .metric-value {
       font-size: 1.2rem;
       font-weight: 700;
-      color: #f8fafc;
+      color: var(--text-main);
       font-family: "JetBrains Mono", monospace;
     }
 
@@ -138,8 +138,8 @@ if (token) {
     }
 
     .panel {
-      background: #111118;
-      border: 1px solid #1e1e2e;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 12px;
       padding: 1rem;
     }
@@ -147,17 +147,17 @@ if (token) {
     .panel h3 {
       margin: 0 0 0.7rem;
       font-size: 0.95rem;
-      color: #f8fafc;
+      color: var(--text-main);
     }
 
     .meta {
       font-size: 0.82rem;
-      color: #94a3b8;
+      color: var(--text-dim);
     }
 
     .insight-card {
-      background: #0b1220;
-      border: 1px solid #1f2a3a;
+      background: var(--surface-3);
+      border: 1px solid var(--line-strong);
       border-radius: 10px;
       padding: 0.75rem;
       margin-bottom: 0.5rem;
@@ -166,7 +166,7 @@ if (token) {
     .insight-title {
       font-size: 0.84rem;
       font-weight: 700;
-      color: #f8fafc;
+      color: var(--text-main);
       margin-bottom: 0.3rem;
     }
 
@@ -180,23 +180,23 @@ if (token) {
     }
 
     .pill.high {
-      background: #7f1d1d;
-      color: #fecaca;
+      background: var(--danger-bg);
+      color: var(--danger-text);
     }
 
     .pill.medium {
-      background: #78350f;
-      color: #fde68a;
+      background: var(--surface-2);
+      color: var(--accent);
     }
 
     .pill.low {
-      background: #1e3a8a;
-      color: #bfdbfe;
+      background: var(--surface-2);
+      color: var(--text-subtle);
     }
 
     .live-feed {
-      background: #070d18;
-      border: 1px solid #1e293b;
+      background: var(--surface-3);
+      border: 1px solid var(--surface-2);
       border-radius: 10px;
       max-height: 260px;
       overflow: auto;
@@ -204,7 +204,7 @@ if (token) {
       font-family: "JetBrains Mono", monospace;
       font-size: 0.76rem;
       line-height: 1.45;
-      color: #bfdbfe;
+      color: var(--text-subtle);
     }
 
     .live-row {
@@ -222,8 +222,8 @@ if (token) {
       gap: 0.4rem;
       padding: 0.65rem 1rem;
       border-radius: 0.45rem;
-      border: 1px solid #334155;
-      color: #cbd5e1;
+      border: 1px solid var(--line-strong);
+      color: var(--text-subtle);
       text-decoration: none;
       margin-top: 0.8rem;
     }
@@ -276,9 +276,9 @@ if (token) {
           ) : (
             contextEntries.slice(0, 6).map((entry: any) => (
               <div class="insight-card">
-                <div class="insight-title">{entry.model} • {(entry.inputTokens || 0).toLocaleString()} input tokens</div>
+                <div class="insight-title">{entry.model} | {(entry.inputTokens || 0).toLocaleString()} input tokens</div>
                 <div class="meta">
-                  System {entry.segments?.systemPromptTokens || 0} • History {entry.segments?.historyTokens || 0} • Tool {entry.segments?.toolResultTokens || 0} • Current {entry.segments?.currentTurnTokens || 0}
+                  System {entry.segments?.systemPromptTokens || 0} | History {entry.segments?.historyTokens || 0} | Tool {entry.segments?.toolResultTokens || 0} | Current {entry.segments?.currentTurnTokens || 0}
                 </div>
                 <div class="meta" style={{ marginTop: "0.25rem" }}>
                   Remaining {(entry.remainingContextTokens || 0).toLocaleString()} / {(entry.maxContextTokens || 0).toLocaleString()} ({entry.source})
@@ -306,7 +306,7 @@ if (token) {
                   </div>
                   <div class="meta">{finding.description}</div>
                   <div class="meta" style={{ marginTop: "0.25rem" }}>
-                    {(finding.wastedTokens || 0).toLocaleString()} tokens • ${Number(finding.wastedCostUsd || 0).toFixed(4)}
+                    {(finding.wastedTokens || 0).toLocaleString()} tokens | ${Number(finding.wastedCostUsd || 0).toFixed(4)}
                   </div>
                 </div>
               ))}
@@ -323,13 +323,13 @@ if (token) {
           ) : (
             <>
               <div class="insight-card">
-                <div class="insight-title">Agents {(topology.nodes || []).length} • Handoffs {(topology.edges || []).length}</div>
+                <div class="insight-title">Agents {(topology.nodes || []).length} | Handoffs {(topology.edges || []).length}</div>
                 <div class="meta">Critical path {Math.round((topology.criticalPathDurationMs || 0) / 1000)}s</div>
               </div>
               {(topology.nodes || []).slice(0, 6).map((node: any) => (
                 <div class="insight-card">
                   <div class="insight-title">{node.id}</div>
-                  <div class="meta">${(node.costUsd || 0).toFixed(4)} • {(node.tokens || 0).toLocaleString()} tokens • {node.eventCount} spans</div>
+                  <div class="meta">${(node.costUsd || 0).toFixed(4)} | {(node.tokens || 0).toLocaleString()} tokens | {node.eventCount} spans</div>
                 </div>
               ))}
             </>
@@ -347,7 +347,7 @@ if (token) {
                   {violation.scope}/{violation.metric}
                   <span class={`pill ${violation.action === "block" ? "high" : "medium"}`}>{violation.action}</span>
                 </div>
-                <div class="meta">current {Number(violation.current_value || 0).toFixed(2)} • limit {Number(violation.limit_value || 0).toFixed(2)}</div>
+                <div class="meta">current {Number(violation.current_value || 0).toFixed(2)} | limit {Number(violation.limit_value || 0).toFixed(2)}</div>
               </div>
             ))
           )}
@@ -365,7 +365,7 @@ if (token) {
           ) : (
             liveSeed.slice(-20).map((event: any) => (
               <div class="live-row">
-                {event.kind} • {event.agentId || "primary"} • {(event.tokens || 0).toLocaleString()} tokens • ${Number(event.costUsd || 0).toFixed(4)}
+                {event.kind} | {event.agentId || "primary"} | {(event.tokens || 0).toLocaleString()} tokens | ${Number(event.costUsd || 0).toFixed(4)}
               </div>
             ))
           )}
@@ -387,7 +387,7 @@ if (token) {
           if (!feed) return;
           const row = document.createElement("div");
           row.className = "live-row";
-          row.textContent = `${event.kind} • ${event.agentId || "primary"} • ${(event.tokens || 0).toLocaleString()} tokens • $${Number(event.costUsd || 0).toFixed(4)}`;
+          row.textContent = `${event.kind} | ${event.agentId || "primary"} | ${(event.tokens || 0).toLocaleString()} tokens | $${Number(event.costUsd || 0).toFixed(4)}`;
           feed.appendChild(row);
           while (feed.children.length > 80) {
             feed.removeChild(feed.firstChild);

@@ -40,6 +40,17 @@ const app = Fastify({
   bodyLimit: 1_500_000,
 });
 
+app.addContentTypeParser("application/json", { parseAs: "string" }, (request, body, done) => {
+  try {
+    const raw = Buffer.isBuffer(body) ? body.toString("utf8") : body;
+    (request as any).rawBody = raw;
+    const parsed = raw && raw.trim() !== "" ? JSON.parse(raw) : {};
+    done(null, parsed);
+  } catch (err) {
+    done(err as Error, undefined);
+  }
+});
+
 function parseCorsOrigins(input?: string): string[] {
   if (!input || input.trim() === "") {
     return ["http://localhost:3000", "http://localhost:3001"];
@@ -126,6 +137,50 @@ function computeRetryDelay(attempt: number): number {
   return Math.min(storeRetryMaxMs, base + jitter);
 }
 
+function isStoreConnectivityError(err: unknown): boolean {
+  const text = String((err as any)?.message || err || "").toLowerCase();
+  return (
+    text.includes("eai_again") ||
+    text.includes("enotfound") ||
+    text.includes("etimedout") ||
+    text.includes("econnreset") ||
+    text.includes("fetch failed") ||
+    text.includes("network") ||
+    text.includes("dns")
+  );
+}
+
+function handleStoreError(err: unknown): boolean {
+  if (!isStoreConnectivityError(err)) return false;
+  storeReady = false;
+  storeLastError = String((err as any)?.message || err || "unknown database error");
+  ensureStoreConnected().catch((reconnectErr) => {
+    app.log.error(reconnectErr, "database reconnect loop failed");
+  });
+  return true;
+}
+
+function sendStoreAwareError(
+  request: any,
+  reply: any,
+  err: unknown,
+  code: string,
+  message: string,
+) {
+  app.log.error(err);
+  if (handleStoreError(err)) {
+    sendError(
+      request,
+      reply,
+      503,
+      "DATABASE_UNAVAILABLE",
+      "Database connection lost. Reconnecting, please retry shortly.",
+    );
+    return;
+  }
+  sendError(request, reply, 500, code, message);
+}
+
 async function ensureStoreConnected(): Promise<void> {
   if (storeReady || storeReconnectInProgress) return;
   storeReconnectInProgress = true;
@@ -166,12 +221,24 @@ function verifyStripeSignature(
 
   const parts = signatureHeader.split(",").map((part) => part.trim());
   const timestamp = parts.find((part) => part.startsWith("t="))?.slice(2);
-  const signature = parts.find((part) => part.startsWith("v1="))?.slice(3);
-  if (!timestamp || !signature) return false;
+  const signatures = parts
+    .filter((part) => part.startsWith("v1="))
+    .map((part) => part.slice(3))
+    .filter(Boolean);
+  if (!timestamp || signatures.length === 0) return false;
+
+  const timestampNumber = Number(timestamp);
+  if (!Number.isFinite(timestampNumber)) return false;
+  const toleranceSec = Math.max(
+    0,
+    parsePositiveInt(process.env.STRIPE_WEBHOOK_TOLERANCE_SEC, 300),
+  );
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (Math.abs(nowSec - timestampNumber) > toleranceSec) return false;
 
   const signedPayload = `${timestamp}.${payload}`;
   const expected = crypto.createHmac("sha256", secret).update(signedPayload).digest("hex");
-  return safeTimingEqual(signature, expected);
+  return signatures.some((signature) => safeTimingEqual(signature, expected));
 }
 
 function toQueryEvent(event: any, workspaceId: string): QueryEvent {
@@ -247,6 +314,30 @@ function budgetTargetMatches(budget: QueryBudget, event: any, sessionId: string,
     return budget.target === event.model || budget.target === event.toolName || budget.target === agentId;
   }
   return false;
+}
+
+function derivePlanFromStripeEvent(event: any): "free" | "pro" | "business" | undefined {
+  const type = String(event?.type || "");
+  const object = event?.data?.object || {};
+  const status = String(object?.status || "").toLowerCase();
+  const amount = Number(object?.items?.data?.[0]?.price?.unit_amount || object?.amount_total || 0);
+
+  if (type === "customer.subscription.deleted" || type === "invoice.payment_failed") {
+    return "free";
+  }
+
+  if (
+    type === "checkout.session.completed" ||
+    type === "customer.subscription.created" ||
+    type === "customer.subscription.updated" ||
+    type === "invoice.paid"
+  ) {
+    if (status && !["active", "trialing"].includes(status)) return "free";
+    if (!Number.isFinite(amount) || amount <= 0) return "pro";
+    return amount >= 29900 ? "business" : "pro";
+  }
+
+  return undefined;
 }
 
 // Register plugins
@@ -565,8 +656,7 @@ app.post<{ Body: any[]; Headers: { "idempotency-key"?: string } }>(
 
       reply.send({ ok: true, count: events.length });
     } catch (err) {
-      app.log.error(err);
-      sendError(request, reply, 500, "INGEST_FAILED", "Event ingest failed.");
+      sendStoreAwareError(request, reply, err, "INGEST_FAILED", "Event ingest failed.");
     }
   },
 );
@@ -586,8 +676,7 @@ app.get<{ Querystring: { limit?: string; offset?: string } }>("/v1/sessions", as
     const sessions = await store.getSessions(workspaceId, limit, offset);
     reply.send({ sessions });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "LIST_SESSIONS_FAILED", "Failed to list sessions.");
+    sendStoreAwareError(request, reply, err, "LIST_SESSIONS_FAILED", "Failed to list sessions.");
   }
 });
 
@@ -639,8 +728,7 @@ app.get<{
     const diff = buildSessionDiff(baseSession, baseEvents, targetSession, targetEvents);
     reply.send({ diff });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "SESSION_DIFF_FAILED", "Failed to compare sessions.");
+    sendStoreAwareError(request, reply, err, "SESSION_DIFF_FAILED", "Failed to compare sessions.");
   }
 });
 
@@ -664,8 +752,7 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id", async (request, reply) =
     const events = await store.getSessionEventsForWorkspace(id, workspaceId);
     reply.send({ session, events });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "GET_SESSION_FAILED", "Failed to get session.");
+    sendStoreAwareError(request, reply, err, "GET_SESSION_FAILED", "Failed to get session.");
   }
 });
 
@@ -690,8 +777,13 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/flamegraph", async (reques
     const metrics = computeTreeMetrics(tree);
     reply.send({ tree, metrics });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "FLAMEGRAPH_BUILD_FAILED", "Failed to build flamegraph.");
+    sendStoreAwareError(
+      request,
+      reply,
+      err,
+      "FLAMEGRAPH_BUILD_FAILED",
+      "Failed to build flamegraph.",
+    );
   }
 });
 
@@ -715,11 +807,10 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/context-anatomy", async (r
     const entries = buildContextAnatomy(events);
     reply.send({ sessionId: id, entries });
   } catch (err) {
-    app.log.error(err);
-    sendError(
+    sendStoreAwareError(
       request,
       reply,
-      500,
+      err,
       "CONTEXT_ANATOMY_FAILED",
       "Failed to compute context anatomy.",
     );
@@ -746,8 +837,13 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/waste-report", async (requ
     const report = buildWastedTokenReport(session, events);
     reply.send({ sessionId: id, report });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "WASTE_REPORT_FAILED", "Failed to generate waste report.");
+    sendStoreAwareError(
+      request,
+      reply,
+      err,
+      "WASTE_REPORT_FAILED",
+      "Failed to generate waste report.",
+    );
   }
 });
 
@@ -771,8 +867,13 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/topology", async (request,
     const topology = buildTopology(events);
     reply.send({ sessionId: id, topology });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "TOPOLOGY_FAILED", "Failed to build session topology.");
+    sendStoreAwareError(
+      request,
+      reply,
+      err,
+      "TOPOLOGY_FAILED",
+      "Failed to build session topology.",
+    );
   }
 });
 
@@ -822,8 +923,13 @@ app.get<{ Params: { id: string }; Querystring: { cursor?: string; limit?: string
         events: normalized,
       });
     } catch (err) {
-      app.log.error(err);
-      sendError(request, reply, 500, "LIVE_TRACE_FAILED", "Failed to fetch live trace data.");
+      sendStoreAwareError(
+        request,
+        reply,
+        err,
+        "LIVE_TRACE_FAILED",
+        "Failed to fetch live trace data.",
+      );
     }
   },
 );
@@ -846,11 +952,10 @@ app.get<{ Params: { id: string } }>("/v1/sessions/:id/budget-violations", async 
     const violations = await store.listBudgetViolations(workspaceId, id, 100);
     reply.send({ sessionId: id, violations });
   } catch (err) {
-    app.log.error(err);
-    sendError(
+    sendStoreAwareError(
       request,
       reply,
-      500,
+      err,
       "LIST_BUDGET_VIOLATIONS_FAILED",
       "Failed to list budget violations.",
     );
@@ -871,8 +976,13 @@ app.get<{ Querystring: { group_by?: string } }>("/v1/cost/breakdown", async (req
     const breakdown = await store.getCostBreakdown(workspaceId, safeGroupBy);
     reply.send({ breakdown, groupBy: safeGroupBy });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "COST_BREAKDOWN_FAILED", "Failed to compute cost breakdown.");
+    sendStoreAwareError(
+      request,
+      reply,
+      err,
+      "COST_BREAKDOWN_FAILED",
+      "Failed to compute cost breakdown.",
+    );
   }
 });
 
@@ -903,8 +1013,7 @@ app.get("/v1/alerts", async (request, reply) => {
     const alerts = await store.getAlerts(workspaceId);
     reply.send({ alerts });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "LIST_ALERTS_FAILED", "Failed to list alerts.");
+    sendStoreAwareError(request, reply, err, "LIST_ALERTS_FAILED", "Failed to list alerts.");
   }
 });
 
@@ -924,8 +1033,7 @@ app.post("/v1/alerts", async (request, reply) => {
     await store.createAlert(id, workspaceId, name, condition, threshold, webhookUrl, email);
     reply.code(201).send({ id });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "CREATE_ALERT_FAILED", "Failed to create alert.");
+    sendStoreAwareError(request, reply, err, "CREATE_ALERT_FAILED", "Failed to create alert.");
   }
 });
 
@@ -943,8 +1051,7 @@ app.delete("/v1/alerts/:alertId", async (request, reply) => {
     }
     reply.send({ ok: true });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "DELETE_ALERT_FAILED", "Failed to delete alert.");
+    sendStoreAwareError(request, reply, err, "DELETE_ALERT_FAILED", "Failed to delete alert.");
   }
 });
 
@@ -965,8 +1072,7 @@ app.get("/v1/workspace", async (request, reply) => {
         : { id: workspaceId, name: "default", plan: "free", sessions_this_month },
     });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "GET_WORKSPACE_FAILED", "Failed to get workspace.");
+    sendStoreAwareError(request, reply, err, "GET_WORKSPACE_FAILED", "Failed to get workspace.");
   }
 });
 
@@ -984,8 +1090,7 @@ app.post("/v1/workspace/api-keys", async (request, reply) => {
     await store.createApiKey(workspaceId, keyHash, keyId);
     reply.send({ keyId, apiKey, createdAt: new Date().toISOString() });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "CREATE_API_KEY_FAILED", "Failed to create API key.");
+    sendStoreAwareError(request, reply, err, "CREATE_API_KEY_FAILED", "Failed to create API key.");
   }
 });
 
@@ -1004,8 +1109,7 @@ app.get("/v1/workspace/api-keys", async (request, reply) => {
       })),
     });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "LIST_API_KEYS_FAILED", "Failed to list API keys.");
+    sendStoreAwareError(request, reply, err, "LIST_API_KEYS_FAILED", "Failed to list API keys.");
   }
 });
 
@@ -1023,8 +1127,7 @@ app.delete("/v1/workspace/api-keys/:keyId", async (request, reply) => {
     }
     reply.send({ ok: true });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "REVOKE_API_KEY_FAILED", "Failed to revoke API key.");
+    sendStoreAwareError(request, reply, err, "REVOKE_API_KEY_FAILED", "Failed to revoke API key.");
   }
 });
 
@@ -1040,8 +1143,7 @@ app.get("/v1/budgets", async (request, reply) => {
     const budgets = await store.listBudgets(workspaceId, false);
     reply.send({ budgets });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "LIST_BUDGETS_FAILED", "Failed to list budgets.");
+    sendStoreAwareError(request, reply, err, "LIST_BUDGETS_FAILED", "Failed to list budgets.");
   }
 });
 
@@ -1098,8 +1200,7 @@ app.post("/v1/budgets", async (request, reply) => {
     });
     reply.code(201).send({ id: budgetId });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "CREATE_BUDGET_FAILED", "Failed to create budget.");
+    sendStoreAwareError(request, reply, err, "CREATE_BUDGET_FAILED", "Failed to create budget.");
   }
 });
 
@@ -1117,8 +1218,7 @@ app.delete("/v1/budgets/:budgetId", async (request, reply) => {
     }
     reply.send({ ok: true });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "DELETE_BUDGET_FAILED", "Failed to delete budget.");
+    sendStoreAwareError(request, reply, err, "DELETE_BUDGET_FAILED", "Failed to delete budget.");
   }
 });
 
@@ -1130,7 +1230,10 @@ app.post("/v1/webhooks/stripe", async (request, reply) => {
   try {
     const signature = request.headers["stripe-signature"] as string | undefined;
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
-    const payload = JSON.stringify(request.body || {});
+    const payload =
+      (request as any).rawBody && typeof (request as any).rawBody === "string"
+        ? ((request as any).rawBody as string)
+        : JSON.stringify(request.body || {});
 
     if (!verifyStripeSignature(signature, payload, secret)) {
       sendError(
@@ -1144,24 +1247,27 @@ app.post("/v1/webhooks/stripe", async (request, reply) => {
     }
 
     const event = request.body as any;
-    const customerId = event?.data?.object?.customer as string | undefined;
-    const status = event?.data?.object?.status as string | undefined;
-    const workspaceId = event?.data?.object?.metadata?.workspaceId as string | undefined;
-    if (customerId && workspaceId) {
-      const targetPlan: "free" | "pro" | "business" =
-        status === "active" && event?.data?.object?.items?.data?.[0]?.price?.unit_amount >= 29900
-          ? "business"
-          : status === "active"
-            ? "pro"
-            : "free";
+    const customerId =
+      (event?.data?.object?.customer as string | undefined) ||
+      (event?.data?.object?.customer_id as string | undefined);
+    const workspaceId =
+      (event?.data?.object?.metadata?.workspaceId as string | undefined) ||
+      (event?.data?.object?.metadata?.workspace_id as string | undefined);
+    const targetPlan = derivePlanFromStripeEvent(event);
+    if (customerId && workspaceId && targetPlan) {
       await store.createWorkspace(workspaceId, "default", targetPlan);
       await store.updateWorkspacePlan(workspaceId, targetPlan, customerId);
     }
 
     reply.send({ ok: true });
   } catch (err) {
-    app.log.error(err);
-    sendError(request, reply, 500, "STRIPE_WEBHOOK_FAILED", "Stripe webhook handling failed.");
+    sendStoreAwareError(
+      request,
+      reply,
+      err,
+      "STRIPE_WEBHOOK_FAILED",
+      "Stripe webhook handling failed.",
+    );
   }
 });
 

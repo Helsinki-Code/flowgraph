@@ -5,7 +5,7 @@ import Dashboard from "../../layouts/Dashboard.astro";
 import { API_URL } from "../../lib/api";
 import { fetchJsonWithTimeout } from "../../lib/server-fetch";
 
-let userId, orgId, token;
+let userId, token;
 try {
   if (!Astro.locals?.auth) {
     return Astro.redirect("/sign-in");
@@ -13,22 +13,17 @@ try {
 
   const auth = Astro.locals.auth();
   userId = auth?.userId;
-  orgId = auth?.orgId;
   token = auth?.getToken ? await auth.getToken() : null;
-
-  if (!userId) {
-    return Astro.redirect("/sign-in");
-  }
-} catch (e) {
-  console.error("Auth error in /app/alerts:", e);
+  if (!userId) return Astro.redirect("/sign-in");
+} catch (error) {
+  console.error("Auth error in /app/alerts:", error);
   return Astro.redirect("/sign-in");
 }
 
-const workspaceId = orgId || userId;
-let alerts = [];
-let error = null;
+let alerts: any[] = [];
+let error: string | null = null;
 
-if (workspaceId && token) {
+if (token) {
   try {
     const data = await fetchJsonWithTimeout<{ alerts: any[] }>(`${API_URL}/v1/alerts`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -40,88 +35,359 @@ if (workspaceId && token) {
     error = `Failed to load alerts: ${e.message}`;
   }
 } else {
-  error = "Missing authentication data";
+  error = "Missing authentication token";
 }
 ---
 
-<Dashboard title="Alerts" description="Set up cost and loop detection alerts">
-  {error && <div style={{ padding: "1rem", background: "#7f1d1d", color: "#fca5a5", borderRadius: "0.375rem", marginBottom: "1.5rem" }}>{error}</div>}
+<Dashboard title="Alerts" description="Create policy-driven alerts for cost spikes, loops, and regressions.">
+  <style>
+    .error-banner {
+      padding: 0.95rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--danger-border);
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      margin-bottom: 0.9rem;
+      font-size: 0.88rem;
+    }
 
-  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "3rem" }}>
-    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-      <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>Create Alert</h3>
-      <form id="alert-form" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <input type="text" placeholder="Alert name" style={{ padding: "0.75rem", background: "#0f172a", border: "1px solid #334155", borderRadius: "0.375rem", color: "#fafafa" }} name="name" required />
-        <select name="condition" style={{ padding: "0.75rem", background: "#0f172a", border: "1px solid #334155", borderRadius: "0.375rem", color: "#fafafa" }}>
-          <option value="cost_spike">Cost spike (>$10/session)</option>
-          <option value="token_excess">Token excess (>100k tokens)</option>
-          <option value="loop_detected">Loop detected</option>
-          <option value="custom">Custom</option>
-        </select>
-        <input type="email" placeholder="Email" style={{ padding: "0.75rem", background: "#0f172a", border: "1px solid #334155", borderRadius: "0.375rem", color: "#fafafa" }} name="email" />
-        <button type="submit" style={{ padding: "0.75rem", background: "#f97316", color: "white", border: "none", borderRadius: "0.375rem", fontWeight: "600", cursor: "pointer" }}>Create Alert</button>
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 0.9rem;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 0.95rem;
+      padding: 1rem;
+    }
+
+    .panel h2 {
+      margin: 0 0 0.8rem;
+      font-family: "Bricolage Grotesque", sans-serif;
+      letter-spacing: -0.02em;
+      font-size: 1rem;
+    }
+
+    .panel-subtitle {
+      margin: -0.25rem 0 0.8rem;
+      color: var(--text-dim);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.62rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .label {
+      margin: 0;
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    .control {
+      width: 100%;
+      padding: 0.6rem 0.7rem;
+      border-radius: 0.52rem;
+      border: 1px solid var(--line-strong);
+      background: var(--surface-1);
+      color: var(--text-main);
+      font-size: 0.87rem;
+    }
+
+    .control:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.16);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-top: 0.2rem;
+      grid-column: 1 / -1;
+    }
+
+    .btn {
+      border-radius: 0.54rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-size: 0.84rem;
+      font-weight: 700;
+      padding: 0.62rem 0.9rem;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--accent-strong);
+    }
+
+    .btn.secondary {
+      background: var(--surface-1);
+      color: var(--text-main);
+      border-color: var(--line-strong);
+    }
+
+    .btn.secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .list {
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .item {
+      border: 1px solid var(--line-strong);
+      border-radius: 0.72rem;
+      background: var(--surface-3);
+      padding: 0.75rem 0.78rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.7rem;
+    }
+
+    .item h3 {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .meta {
+      margin-top: 0.22rem;
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      line-height: 1.45;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      padding: 0.16rem 0.42rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.64rem;
+      font-weight: 700;
+      color: var(--text-subtle);
+      margin-right: 0.32rem;
+    }
+
+    .empty {
+      border: 1px dashed var(--line-strong);
+      border-radius: 0.7rem;
+      background: var(--surface-3);
+      padding: 1rem;
+      color: var(--text-dim);
+      font-size: 0.84rem;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  {error && <div class="error-banner">{error}</div>}
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Create Alert</h2>
+      <p class="panel-subtitle">
+        Track unstable cost patterns and catch loops early. Alerts are workspace-scoped and can notify by email or webhook.
+      </p>
+
+      <form id="alert-form" class="form-grid">
+        <label class="field full">
+          <span class="label">Name</span>
+          <input class="control" name="name" type="text" placeholder="High Cost Session" required />
+        </label>
+
+        <label class="field">
+          <span class="label">Condition</span>
+          <select class="control" name="condition">
+            <option value="cost_spike">Cost spike</option>
+            <option value="token_excess">Token excess</option>
+            <option value="loop_detected">Loop detected</option>
+            <option value="custom">Custom rule</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="label">Threshold (optional)</span>
+          <input class="control" name="threshold" type="number" step="0.0001" min="0" placeholder="10.0" />
+        </label>
+
+        <label class="field full">
+          <span class="label">Webhook URL (optional)</span>
+          <input class="control" name="webhookUrl" type="url" placeholder="https://hooks.slack.com/..." />
+        </label>
+
+        <label class="field full">
+          <span class="label">Email (optional)</span>
+          <input class="control" name="email" type="email" placeholder="alerts@yourcompany.com" />
+        </label>
+
+        <div class="actions">
+          <button class="btn primary" id="create-alert-btn" type="submit">Create Alert</button>
+          <button class="btn secondary" type="reset">Reset</button>
+        </div>
       </form>
-    </div>
+    </section>
 
-    <div style={{ background: "#1e293b", padding: "1.5rem", borderRadius: "0.5rem", border: "1px solid #334155" }}>
-      <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" }}>Active Alerts</h3>
+    <section class="panel">
+      <h2>Active Alerts</h2>
+      <p class="panel-subtitle">
+        Policies currently active for this workspace.
+      </p>
+
       {alerts.length === 0 ? (
-        <p style={{ color: "#94a3b8" }}>No alerts configured yet.</p>
+        <div class="empty">No alert policies yet. Create your first alert to start monitoring regressions.</div>
       ) : (
-        <ul style={{ listStyle: "none" }}>
-          {alerts.map((alert: any) => (
-            <li style={{ paddingY: "0.5rem", borderBottom: "1px solid #334155", display: "flex", justifyContent: "space-between" }}>
+        <div class="list">
+          {alerts.map((alert) => (
+            <article class="item">
               <div>
-                <div style={{ fontWeight: "600" }}>{alert.name}</div>
-                <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{alert.condition}</div>
+                <h3>{alert.name}</h3>
+                <div class="meta">
+                  <span class="pill">{alert.condition}</span>
+                  {typeof alert.threshold === "number" ? `Threshold: ${alert.threshold}` : "No threshold"}
+                </div>
+                <div class="meta">
+                  {alert.email ? `Email: ${alert.email}` : "Email not set"} {alert.webhook_url ? ` | Webhook configured` : ""}
+                </div>
               </div>
-              <button style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: 0 }} onclick={`deleteAlert('${alert.id}')`}>×</button>
-            </li>
+              <button
+                type="button"
+                class="btn secondary delete-alert-btn"
+                data-alert-id={alert.id}
+              >
+                Delete
+              </button>
+            </article>
           ))}
-        </ul>
+        </div>
       )}
-    </div>
+    </section>
   </div>
 
-  <script define:vars={{ token, API_URL }}>
-    document.getElementById("alert-form")?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const data = {
-        name: form.name.value,
-        condition: form.condition.value,
-        email: form.email.value,
-      };
+  <script define:vars={{ API_URL, token }}>
+    const alertForm = document.getElementById("alert-form");
+    const createBtn = document.getElementById("create-alert-btn");
+
+    async function readErrorMessage(response, fallbackMessage) {
       try {
-        const res = await fetch(`${API_URL}/v1/alerts`, {
+        const payload = await response.json();
+        if (payload?.error?.message) return payload.error.message;
+      } catch {
+        // ignore parse errors
+      }
+      try {
+        const text = await response.text();
+        if (text) return text;
+      } catch {
+        // ignore text read errors
+      }
+      return fallbackMessage;
+    }
+
+    alertForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!token) return;
+      if (createBtn) {
+        createBtn.disabled = true;
+        createBtn.textContent = "Creating...";
+      }
+
+      const formData = new FormData(alertForm);
+      const rawThreshold = String(formData.get("threshold") || "").trim();
+      const payload = {
+        name: String(formData.get("name") || "").trim(),
+        condition: String(formData.get("condition") || "").trim(),
+        threshold: rawThreshold !== "" ? Number(rawThreshold) : undefined,
+        webhookUrl: String(formData.get("webhookUrl") || "").trim() || undefined,
+        email: String(formData.get("email") || "").trim() || undefined,
+      };
+
+      try {
+        const response = await fetch(`${API_URL}/v1/alerts`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         });
-        if (res.ok) {
-          location.reload();
+        if (!response.ok) {
+          const message = await readErrorMessage(response, "Failed to create alert.");
+          alert(message);
+          return;
         }
-      } catch (err) {
-        alert("Failed to create alert");
+        location.reload();
+      } catch {
+        alert("Failed to create alert.");
+      } finally {
+        if (createBtn) {
+          createBtn.disabled = false;
+          createBtn.textContent = "Create Alert";
+        }
       }
     });
 
-    async function deleteAlert(id) {
-      if (!confirm("Delete this alert?")) return;
-      try {
-        const res = await fetch(`${API_URL}/v1/alerts/${id}`, {
-          method: "DELETE",
-          headers: { "Authorization": `Bearer ${token}` },
-        });
-        if (res.ok) {
+    document.querySelectorAll(".delete-alert-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        if (!token) return;
+        const alertId = button.getAttribute("data-alert-id");
+        if (!alertId) return;
+        if (!confirm("Delete this alert policy?")) return;
+
+        try {
+          const response = await fetch(`${API_URL}/v1/alerts/${alertId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!response.ok) {
+            const message = await readErrorMessage(response, "Failed to delete alert.");
+            alert(message);
+            return;
+          }
           location.reload();
+        } catch {
+          alert("Failed to delete alert.");
         }
-      } catch (err) {
-        alert("Failed to delete alert");
-      }
-    }
+      });
+    });
   </script>
 </Dashboard>

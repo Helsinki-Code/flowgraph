@@ -2,310 +2,207 @@
 import Public from "../layouts/Public.astro";
 ---
 
-<Public title="Documentation" description="Get started with the Flame Graph SDK in minutes.">
+<Public title="Docs" description="Integrate flamegraph-sdk with your PI agent in a few steps.">
   <style>
-    .docs-container {
-      max-width: 900px;
+    .wrap {
+      max-width: 920px;
       margin: 0 auto;
-      padding: var(--spacing-3xl) 0;
+      margin-top: 0.2rem;
     }
 
-    .docs-header {
-      margin-bottom: var(--spacing-3xl);
+    .head {
+      border: 1px solid var(--pub-border);
+      border-radius: 1rem;
+      background: var(--pub-surface);
+      padding: 1.1rem;
+      margin-bottom: 0.85rem;
     }
 
-    .docs-header h1 {
-      font-size: clamp(2rem, 10vw, 2.5rem);
-      margin-bottom: var(--spacing-md);
+    .head h1 {
+      margin: 0;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: clamp(1.45rem, 5vw, 2.2rem);
+      letter-spacing: -0.02em;
     }
 
-    .docs-header p {
-      color: var(--text-secondary);
-      font-size: var(--text-lg);
+    .head p {
+      margin: 0.55rem 0 0;
+      color: var(--pub-text-subtle);
+      line-height: 1.65;
+      max-width: 64ch;
     }
 
-    .docs-section {
-      margin-bottom: var(--spacing-3xl);
-      padding-bottom: var(--spacing-lg);
-      border-bottom: 1px solid var(--border);
+    .doc-section {
+      border: 1px solid var(--pub-border);
+      border-radius: 0.95rem;
+      background: var(--pub-surface);
+      padding: 1rem;
+      margin-bottom: 0.72rem;
     }
 
-    .docs-section h2 {
-      font-size: var(--text-3xl);
-      font-weight: 700;
-      margin-bottom: var(--spacing-md);
+    .doc-section h2 {
+      margin: 0;
+      font-family: "Bricolage Grotesque", sans-serif;
+      font-size: 1.18rem;
     }
 
-    .docs-section p {
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
+    .doc-section p {
+      margin: 0.5rem 0 0;
+      color: var(--pub-text-subtle);
+      line-height: 1.6;
+      font-size: 0.92rem;
     }
 
-    .docs-section h3 {
-      font-size: var(--text-xl);
-      font-weight: 600;
-      margin-top: var(--spacing-lg);
-      margin-bottom: var(--spacing-md);
+    .code {
+      margin-top: 0.65rem;
+      border: 1px solid var(--pub-border);
+      border-radius: 0.75rem;
+      background: #0a1224;
+      overflow: hidden;
     }
 
-    .docs-code {
-      background: var(--bg-surface);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      overflow-x: auto;
-      margin-bottom: var(--spacing-lg);
-      border: 1px solid var(--border);
-    }
-
-    .docs-code {
-      position: relative;
-    }
-
-    .docs-code code {
-      color: #e2e8f0;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-      font-size: var(--text-sm);
-      line-height: 1.5;
-    }
-
-    .docs-code.shell code {
-      color: var(--success);
-    }
-
-    .copy-code-btn {
-      position: absolute;
-      top: var(--spacing-md);
-      right: var(--spacing-md);
-      padding: var(--spacing-xs) var(--spacing-md);
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: var(--text-xs);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition-base);
-      opacity: 0;
-    }
-
-    .docs-code:hover .copy-code-btn {
-      opacity: 1;
-    }
-
-    .copy-code-btn:hover {
-      background: var(--accent-hover);
-      transform: translateY(-2px);
-    }
-
-    .copy-code-btn.copied {
-      background: var(--success);
-    }
-
-    .docs-list {
-      list-style: none;
-      color: var(--text-secondary);
-    }
-
-    .docs-list li {
-      padding: var(--spacing-sm) 0;
-    }
-
-    .docs-list strong {
-      color: var(--text-primary);
-      font-weight: 600;
-    }
-
-    .docs-list.numbered {
-      list-style: decimal;
-      padding-left: var(--spacing-xl);
-    }
-
-    .docs-list.numbered li {
-      padding: var(--spacing-md) 0;
-      color: var(--text-secondary);
-    }
-
-    .support-box {
-      background: var(--bg-card);
-      padding: var(--spacing-lg);
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-    }
-
-    .support-box h3 {
-      margin-bottom: var(--spacing-md);
-      margin-top: 0;
-    }
-
-    .support-box p {
-      margin-bottom: var(--spacing-md);
-    }
-
-    .support-links {
+    .code-head {
       display: flex;
-      gap: var(--spacing-lg);
-      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.7rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      color: #b6c8ec;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
-    .support-links a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
+    .copy-btn {
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 0.45rem;
+      background: transparent;
+      color: #d4e1fb;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.48rem;
+      cursor: pointer;
     }
 
-    .support-links a:hover {
-      color: var(--accent-hover);
+    .copy-btn:hover {
+      border-color: #f97316;
+      color: #f97316;
     }
 
-    @media (max-width: 768px) {
-      .docs-container {
-        padding: var(--spacing-lg) 0;
-      }
+    .code pre {
+      margin: 0;
+      padding: 0.8rem;
+      overflow: auto;
+      font-family: "JetBrains Mono", monospace;
+      color: #d8e5ff;
+      font-size: 0.84rem;
+      line-height: 1.65;
+    }
 
-      .docs-section h2 {
-        font-size: var(--text-2xl);
-      }
+    .list {
+      margin: 0.62rem 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .list li {
+      border: 1px solid var(--pub-border);
+      border-radius: 0.65rem;
+      background: var(--pub-surface-2);
+      padding: 0.5rem 0.6rem;
+      color: var(--pub-text-subtle);
+      font-size: 0.85rem;
+    }
+
+    .list strong {
+      color: var(--pub-text);
     }
   </style>
 
-  <div class="container docs-container">
-    <section class="docs-header">
+  <div class="wrap">
+    <section class="head">
       <h1>Documentation</h1>
-      <p>Learn how to instrument your AI agent and start tracking token consumption.</p>
+      <p>Use `flamegraph-sdk` with your PI agent and stream telemetry to your dashboard with minimal setup.</p>
     </section>
 
-    <!-- Installation -->
-    <section class="docs-section">
-      <h2>Installation</h2>
-      <p>Install the Flame Graph SDK from npm:</p>
-      <div class="docs-code shell">
-        <code>npm install flamegraph-sdk</code>
+    <section class="doc-section">
+      <h2>1. Install</h2>
+      <p>Install the package from npm:</p>
+      <div class="code">
+        <div class="code-head">
+          <span>shell</span>
+          <button class="copy-btn" data-copy="npm install flamegraph-sdk">Copy</button>
+        </div>
+        <pre>npm install flamegraph-sdk</pre>
       </div>
     </section>
 
-    <!-- Quick Start -->
-    <section class="docs-section">
-      <h2>Quick Start</h2>
-      <p>Wrap your agent with instrumentation in 3 lines:</p>
-      <div class="docs-code">
-        <code>{`import { instrumentAgent } from "flamegraph-sdk";
-import { LocalCollector } from "flamegraph-sdk";
-
-// Create collector that posts to Flame Graph server
-const collector = new LocalCollector({
-  serverUrl: process.env.FLAMEGRAPH_SERVER_URL,
-  apiKey: "sk_...", // Get from dashboard
-});
-
-// Wrap your agent
-instrumentAgent(agent, { collector });
-
-// Events automatically flow to the dashboard
-await agent.run("What's the weather?");`}</code>
-      </div>
-    </section>
-
-    <!-- Configuration -->
-    <section class="docs-section">
-      <h2>Configuration</h2>
-      <p>LocalCollector accepts these options:</p>
-      <ul class="docs-list">
-        <li><strong>serverUrl</strong> (required) - URL to your Flame Graph server</li>
-        <li><strong>apiKey</strong> (optional) - API key from dashboard (for authentication)</li>
-        <li><strong>autoFlushIntervalMs</strong> - Optional interval for automatic batching</li>
-      </ul>
-    </section>
-
-    <!-- API Reference -->
-    <section class="docs-section">
-      <h2>API Reference</h2>
-
-      <h3>instrumentAgent(agent, options)</h3>
-      <p>Wraps an agent to track all LLM calls, tool executions, and context builds.</p>
-      <div class="docs-code">
-        <code>{`instrumentAgent(agent, {
-  collector: LocalCollector,
-  workspaceId?: string,
-  engineerId?: string,
-  feature?: string,
-});`}</code>
-      </div>
-
-      <h3>collector.flush()</h3>
-      <p>Manually flush buffered events to the server. Called automatically at intervals.</p>
-    </section>
-
-    <!-- Getting Your API Key -->
-    <section class="docs-section">
-      <h2>Getting Your API Key</h2>
-      <ol class="docs-list numbered">
-        <li>Sign in to your Flame Graph dashboard</li>
-        <li>Go to Settings â†’ API Keys</li>
-        <li>Click "Generate New Key" and copy it</li>
-        <li>Pass it to LocalCollector as <code>apiKey</code></li>
-      </ol>
-    </section>
-
-    <!-- Examples -->
-    <section class="docs-section">
-      <h2>Examples</h2>
-
-      <h3>With a pi-agent core agent</h3>
-      <div class="docs-code">
-        <code>{`import { createAgent } from "pi-agent-core";
-import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
-
-const agent = createAgent({...});
+    <section class="doc-section">
+      <h2>2. Instrument your agent</h2>
+      <p>Wrap your agent once, then all session events flow automatically.</p>
+      <div class="code">
+        <div class="code-head">
+          <span>agent.ts</span>
+          <button class="copy-btn" data-copy-id="quickstart-code">Copy</button>
+        </div>
+        <pre id="quickstart-code">{`import { instrumentAgent, LocalCollector } from "flamegraph-sdk";
 
 const collector = new LocalCollector({
-  serverUrl: "https://api.flamegraph.dev",
+  serverUrl: process.env.FLAMEGRAPH_URL,
   apiKey: process.env.FLAMEGRAPH_API_KEY,
 });
 
-instrumentAgent(agent, {
-  collector,
-  feature: "market-research",
-  engineerId: "john@company.com",
-});
-
-await agent.run("Research competitors...");`}</code>
+instrumentAgent(agent, { collector });`}</pre>
       </div>
     </section>
 
-    <!-- Support -->
-    <section class="support-box" style="margin-bottom: var(--spacing-3xl);">
-      <h3>Need Help?</h3>
-      <p>Check our GitHub discussions, open an issue, or email support@flamegraph.dev</p>
-      <div class="support-links">
-        <a href="https://github.com/Helsinki-Code/flowgraph/discussions">GitHub</a>
-        <a href="mailto:support@flamegraph.dev">Email</a>
-      </div>
+    <section class="doc-section">
+      <h2>3. Key options</h2>
+      <ul class="list">
+        <li><strong>serverUrl:</strong> Ingest endpoint for your collector API.</li>
+        <li><strong>apiKey:</strong> Workspace API key from Settings.</li>
+        <li><strong>autoFlushIntervalMs:</strong> Optional client-side flush interval.</li>
+        <li><strong>metadata:</strong> Attach feature, engineer, or project context.</li>
+      </ul>
+    </section>
+
+    <section class="doc-section">
+      <h2>4. Recommended workflow</h2>
+      <ul class="list">
+        <li>Generate an API key in dashboard Settings.</li>
+        <li>Save it in environment variables, never hardcode in source.</li>
+        <li>Run an agent session and open the Sessions page.</li>
+        <li>Inspect flamegraph, waste report, and budget violations.</li>
+      </ul>
     </section>
   </div>
 
   <script>
-    // Add copy buttons to all code blocks
-    document.querySelectorAll('.docs-code').forEach((block, index) => {
-      const button = document.createElement('button');
-      button.className = 'copy-code-btn';
-      button.textContent = 'Copy';
-      button.setAttribute('data-index', index);
+    document.querySelectorAll(".copy-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const inlineText = btn.getAttribute("data-copy");
+        const sourceId = btn.getAttribute("data-copy-id");
+        const targetEl = sourceId ? document.getElementById(sourceId) : null;
+        const text = inlineText || targetEl?.innerText || "";
+        if (!text) return;
 
-      button.addEventListener('click', function() {
-        const code = block.querySelector('code').innerText;
-        navigator.clipboard.writeText(code).then(() => {
-          button.textContent = 'Copied!';
-          button.classList.add('copied');
+        try {
+          await navigator.clipboard.writeText(text);
+          const initial = btn.textContent;
+          btn.textContent = "Copied";
           setTimeout(() => {
-            button.textContent = 'Copy';
-            button.classList.remove('copied');
-          }, 2000);
-        });
+            btn.textContent = initial;
+          }, 1400);
+        } catch {
+          btn.textContent = "Failed";
+          setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 1400);
+        }
       });
-
-      block.style.position = 'relative';
-      block.appendChild(button);
     });
   </script>
 </Public>
-
