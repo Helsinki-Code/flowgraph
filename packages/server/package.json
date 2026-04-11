@@ -22,7 +22,7 @@
     "@flamegraph/storage": "*",
     "@sentry/node": "^10.48.0",
     "fastify": "^5.8.4",
-    "flamegraph-sdk": "*",
+    "flamegraph-sdk": "^0.1.0",
     "ulid": "^2.3.0"
   },
   "devDependencies": {
